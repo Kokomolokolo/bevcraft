@@ -23,9 +23,10 @@ pub struct VoxxelPlugin;
 
 impl Plugin for VoxxelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_test_chunk);
         app.init_resource::<ChunkMap>();
-        //app.add_systems(OnEnter(AppState::InGame), (spawn_chunks_around_player).run_if(in_state(AppState::InGame)));
+        //app.add_systems(OnEnter(AppState::InGame), (spawn_test_chunk));
+
+        app.add_systems(OnEnter(AppState::InGame), (spawn_chunks_around_player).run_if(in_state(AppState::InGame)));
     }
 }
 

@@ -6,11 +6,12 @@ pub enum BlockType {
     Air,
     Grass,
     Dirt, 
-    Stone
+    Stone,
+    Water,
 }
 
 impl BlockType {
     pub fn is_solid(&self) -> bool {
-        *self == BlockType::Air
+        *self != BlockType::Air
     }
 }

@@ -21,7 +21,4 @@ impl Chunk {
     pub fn set(&mut self, x: usize, y: usize, z: usize, block: BlockType) {
         self.blocks[Self::index(x, y, z)] = block
     }
-    pub fn is_solid(&mut self, x: usize, y: usize, z: usize) -> bool {
-        self.get(x, y, z) != BlockType::Air 
-    }
 }

@@ -15,6 +15,10 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams) { // Also erstmal nu
         }
     }
 }
+pub fn spawn_test_chunk(spawner: &mut ChunkParams)  {
+    spawn_chunk(spawner, IVec3 { x: 0, y: 0, z: 0 });
+}
+
 
 fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     // Check ob an der Stelle bereits ein Chunk ist
@@ -28,6 +32,7 @@ fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     test_tarrain(&mut chunk);
 
     let mesh = build_chunk_mesh(&chunk);
+
     let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
     let handle = spawner.meshes.add(mesh);
 

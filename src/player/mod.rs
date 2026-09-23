@@ -26,7 +26,7 @@ fn spawn_player(
         RigidBody::Dynamic,
         Collider::capsule(0.5, 1.8),
         LockedAxes::ROTATION_LOCKED,
-        Transform::from_xyz(5.0, 4.0, 5.0),
+        Transform::from_xyz(5.0, 14.0, 5.0),
         ShapeCaster::new(
             Collider::sphere(0.4),
             Vec3::new(0.0, -1.35, 0.0), // knapp oberhalb der tatsächlichen Fußsohle (Zentrum minus ~1.4)
@@ -39,7 +39,7 @@ fn spawn_player(
     .with_children(|parent| {
         parent.spawn((
             Camera3d::default(),
-            Transform::from_xyz(1.0, 1.0, 1.0),
+            //Transform::from_xyz(1.0, 1.0, 1.0),
         ));
     });
 }
