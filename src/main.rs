@@ -12,6 +12,7 @@ use voxel::VoxxelPlugin;
 use player::PlayerPlugin;
 use assets::LoaderPlugin;
 use camera::CameraPlugin;
+use world::WorldPlugin;
 use gui::GUIPlugin;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -29,7 +30,7 @@ fn main() {
         .init_state::<AppState>()
         .add_systems(Startup, setup)
         .add_plugins(CameraPlugin)
-        .add_plugins((LoaderPlugin, VoxxelPlugin, PlayerPlugin, GUIPlugin))
+        .add_plugins((LoaderPlugin, VoxxelPlugin, WorldPlugin, PlayerPlugin, GUIPlugin))
         .add_plugins(PhysicsPlugins::default())
         //.add_plugins(PhysicsDebugPlugin::default())
         .run();

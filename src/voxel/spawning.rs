@@ -7,7 +7,7 @@ use avian3d::prelude::*;
 
 use crate::{player::Player, voxel::{ChunkData, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
 
-const RENDER_DISTANCE: i32 = 20;
+const RENDER_DISTANCE: i32 = 10;
 
 pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Transform, With<Player>>) { // Also erstmal nur so spawne
     use std::time::Instant;
@@ -39,7 +39,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     }
 }
 
-pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, player_q: Query<&Transform, With<Player>>) {
+pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, player_q: Query<&Transform, With<Player>>, generator: Res<WorldGenerator>) {
     // Debug Zeit messung
     use std::time::Instant;
     let now = Instant::now();
@@ -58,7 +58,7 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     for x in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
         for z in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
             let chunk_pos = IVec3::new(x, 0, z) + player_chunk;
-            generate_chunk_data(chunk_pos, &mut chunk_data);
+            generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
         }
     }
     let elapsed = now.elapsed();
@@ -67,7 +67,7 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     }
 }
 
-fn generate_chunk_data(pos: IVec3, chunk_data: &mut ChunkData) {
+fn generate_chunk_data(pos: IVec3, chunk_data: &mut ChunkData, generator: &Res<WorldGenerator>) {
     let pos = ChunkPos(pos);
     
     if chunk_data.0.contains_key(&pos) {
@@ -78,7 +78,7 @@ fn generate_chunk_data(pos: IVec3, chunk_data: &mut ChunkData) {
     let mut chunk = Chunk::new();
 
     // Chunk wird nach generationsregeln bearbeitet
-    WorldGenerator::test_tarrain(&mut chunk);
+    generator.test_tarrain(&mut chunk, pos);
     
     // Daten werden gepeichert
     chunk_data.0.insert(pos, chunk);

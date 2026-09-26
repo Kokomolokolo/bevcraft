@@ -41,12 +41,10 @@ pub fn setup_camera(
     cursor_options.grab_mode = CursorGrabMode::Locked;
     cursor_options.visible = false;
 
-    //commands.spawn(Camera2d::default());
     
     commands.spawn((
         Camera3d::default(),
-        //Camera::default(),
-        Transform::from_xyz(0.0, 0.0, 8.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 40.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
         FpsCamera::default(),
         Player
     ));

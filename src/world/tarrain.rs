@@ -1,23 +1,36 @@
 // Tarrain Via Noise
 
-use crate::{voxel::{block::BlockType, chunk::{CHUNK_SIZE, Chunk}}, world::WorldGenerator};
+use bevy::math::IVec3;
+use noise::NoiseFn;
 
+use crate::{voxel::{block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::WorldGenerator};
 
 impl WorldGenerator {
-    pub fn test_tarrain(chunk: &mut Chunk) {
+    pub fn test_tarrain(&self, chunk: &mut Chunk, chunk_pos: ChunkPos) {
+        let chunk_offset = chunk_pos.to_world();
+        
         for x in 0..CHUNK_SIZE {
-            for y in 0..CHUNK_SIZE {
-                for z in 0..CHUNK_SIZE {
-                    
-                    if y < 2 {
-                        chunk.set(x, y, z, BlockType::Stone)
-                    }
-                    if x == 3 && z == 3 {
+            for z in 0..CHUNK_SIZE {
+                let world_x = chunk_offset.x + x as f32;
+                let world_z = chunk_offset.z + z as f32;
+                let noise_value = self.noise.get([world_x as f64 * 0.05, world_z as f64 * 0.05]) as f32;
+                let height = ((noise_value * 10.) + 10.).max(0.0) as usize;
+
+                
+                for y in 0..CHUNK_SIZE {
+
+                    if y < height as usize {
                         chunk.set(x, y, z, BlockType::Stone);
                     }
-                    if x > y {
-                        chunk.set(x, y, z, BlockType::Stone);
-                    }
+                    //if y < 2 {
+                    //    chunk.set(x, y, z, BlockType::Stone)
+                    //}
+                    //if x == 3 && z == 3 {
+                    //    chunk.set(x, y, z, BlockType::Stone);
+                    //}
+                    //if x > y {
+                    //    chunk.set(x, y, z, BlockType::Stone);
+                    //}
                 }
             }
         }

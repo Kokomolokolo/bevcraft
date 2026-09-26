@@ -8,7 +8,7 @@ pub mod block;
 pub mod chunk;
 mod meshing;
 mod tarrain;
-mod components;
+pub mod components;
 mod spawning;
 mod chunk_data;
 
