@@ -5,7 +5,7 @@ use avian3d::prelude::*;
 
 use crate::voxel::{ChunkParams, chunk::Chunk, components::ChunkPos, meshing::build_chunk_mesh, tarrain::test_tarrain};
 
-const RENDER_DISTANCE: i32 = 1;
+const RENDER_DISTANCE: i32 = 0;
 
 pub fn spawn_chunks_around_player(mut spawner: ChunkParams) { // Also erstmal nur so spawne
     for x in -RENDER_DISTANCE..=RENDER_DISTANCE {
@@ -25,6 +25,7 @@ fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     if spawner.chunk_map.0.contains_key(&coord) {
         return;
     }
+    println!("Spawning Chunk");
     let pos = ChunkPos(coord);
     let mut chunk = Chunk::new();
 

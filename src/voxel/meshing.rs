@@ -28,8 +28,8 @@ pub fn build_chunk_mesh(chunk: &Chunk) -> Mesh {
                 let render_bottom = !get_safe_block(chunk, x as i32, y as i32 - 1, z as i32).is_solid();
                 let render_right = !get_safe_block(chunk, x as i32 + 1, y as i32, z as i32).is_solid();
                 let render_left = !get_safe_block(chunk, x as i32 - 1, y as i32, z as i32).is_solid();
-                let render_back = !get_safe_block(chunk, x as i32, y as i32, z as i32 + 1).is_solid();
-                let render_front = !get_safe_block(chunk, x as i32, y as i32, z as i32 - 1).is_solid();
+                let render_back = !get_safe_block(chunk, x as i32, y as i32, z as i32 - 1).is_solid();
+                let render_front = !get_safe_block(chunk, x as i32, y as i32, z as i32 + 1).is_solid();
                 
                 add_faces(
                     pos, 
@@ -37,7 +37,7 @@ pub fn build_chunk_mesh(chunk: &Chunk) -> Mesh {
                     &mut vertices, 
                     &mut normals, 
                     &mut indices, 
-                    &mut uvs, 
+                    &mut uvs,
                     render_top, 
                     render_bottom, 
                     render_right, 
@@ -91,7 +91,7 @@ fn get_safe_block(
 
 fn add_faces(
     pos: Vec3,
-    block_type: BlockType, 
+    _block_type: BlockType,
     vertices: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,
     indices: &mut Vec<u32>,
@@ -106,98 +106,61 @@ fn add_faces(
     let x = pos.x;
     let y = pos.y;
     let z = pos.z;
-    // TOP
+
+    // TOP (+Y)
     if render_top {
         let base = vertices.len() as u32;
         vertices.extend_from_slice(&[
-            [pos.x as f32, pos.y as f32 + 1.0, pos.z as f32],
-            [pos.x as f32 + 1.0, pos.y as f32 + 1.0, pos.z as f32],
-            [pos.x as f32 + 1.0, pos.y as f32 + 1.0, pos.z as f32 + 1.0],
-            [pos.x as f32, pos.y as f32 + 1.0, pos.z as f32 + 1.0],
+            [x, y + 1.0, z + 1.0],
+            [x + 1.0, y + 1.0, z + 1.0],
+            [x + 1.0, y + 1.0, z],
+            [x, y + 1.0, z],
         ]);
-
         normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-        ]);
-        indices.extend_from_slice(&[
-            base,
-            base + 1,
-            base + 2,
-            base,
-            base + 2,
-            base + 3,
-        ]);
+        uvs.extend_from_slice(&[[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }
+
+    // BOTTOM (-Y)
     if render_bottom {
         let base = vertices.len() as u32;
         vertices.extend_from_slice(&[
-            [x, y, z + 1.0],
-            [x + 1.0, y, z + 1.0],
-            [x + 1.0, y, z],
             [x, y, z],
+            [x + 1.0, y, z],
+            [x + 1.0, y, z + 1.0],
+            [x, y, z + 1.0],
         ]);
-
         normals.extend_from_slice(&[[0.0, -1.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-        ]);
-        indices.extend_from_slice(&[
-            base, base + 1, base + 2,
-            base, base + 2, base + 3,
-        ]);
+        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }
 
     // RIGHT (+X)
     if render_right {
         let base = vertices.len() as u32;
         vertices.extend_from_slice(&[
-            [x + 1.0, y, z],
             [x + 1.0, y, z + 1.0],
-            [x + 1.0, y + 1.0, z + 1.0],
+            [x + 1.0, y, z],
             [x + 1.0, y + 1.0, z],
+            [x + 1.0, y + 1.0, z + 1.0],
         ]);
-
         normals.extend_from_slice(&[[1.0, 0.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-        ]);
-        indices.extend_from_slice(&[
-            base, base + 1, base + 2,
-            base, base + 2, base + 3,
-        ]);
+        uvs.extend_from_slice(&[[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
+        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }
 
     // LEFT (-X)
     if render_left {
         let base = vertices.len() as u32;
         vertices.extend_from_slice(&[
-            [x, y, z + 1.0],
             [x, y, z],
-            [x, y + 1.0, z],
+            [x, y, z + 1.0],
             [x, y + 1.0, z + 1.0],
+            [x, y + 1.0, z],
         ]);
-
         normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-        ]);
-        indices.extend_from_slice(&[
-            base, base + 1, base + 2,
-            base, base + 2, base + 3,
-        ]);
+        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }
 
     // FRONT (+Z)
@@ -209,18 +172,9 @@ fn add_faces(
             [x + 1.0, y + 1.0, z + 1.0],
             [x, y + 1.0, z + 1.0],
         ]);
-
         normals.extend_from_slice(&[[0.0, 0.0, 1.0]; 4]);
-        uvs.extend_from_slice(&[
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-        ]);
-        indices.extend_from_slice(&[
-            base, base + 1, base + 2,
-            base, base + 2, base + 3,
-        ]);
+        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }
 
     // BACK (-Z)
@@ -232,17 +186,8 @@ fn add_faces(
             [x, y + 1.0, z],
             [x + 1.0, y + 1.0, z],
         ]);
-
         normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
-        uvs.extend_from_slice(&[
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [1.0, 1.0],
-            [0.0, 1.0],
-        ]);
-        indices.extend_from_slice(&[
-            base, base + 1, base + 2,
-            base, base + 2, base + 3,
-        ]);
+        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
+        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
     }
 }

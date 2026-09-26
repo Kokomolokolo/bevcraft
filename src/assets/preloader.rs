@@ -8,8 +8,9 @@ pub fn setup_chunk_material(
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let handle = materials.add(StandardMaterial {
-            base_color: Color::WHITE,
+            base_color: Color::srgb(0.5, 0.5, 0.5),
             cull_mode: None,
+            //unlit: true,
             ..default()
         });
         commands.insert_resource(ChunkMaterial(handle));

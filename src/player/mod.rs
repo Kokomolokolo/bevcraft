@@ -13,8 +13,8 @@ use crate::AppState;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::InGame), spawn_player);
-        app.add_systems(Update, (player_movement, player_look, lock_cursor_on_click, player_jump).run_if(in_state(AppState::InGame)));
+        //app.add_systems(OnEnter(AppState::InGame), spawn_player);
+        //app.add_systems(Update, (player_movement, player_look, lock_cursor_on_click, player_jump).run_if(in_state(AppState::InGame)));
     }
 }
 

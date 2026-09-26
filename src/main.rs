@@ -5,10 +5,12 @@ mod voxel;
 mod mesh;
 mod player;
 mod assets;
+mod camera;
 
 use voxel::VoxxelPlugin;
 use player::PlayerPlugin;
 use assets::LoaderPlugin;
+use camera::CameraPlugin;
 use voxel::ChunkMap;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
@@ -24,6 +26,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .init_state::<AppState>()
         .add_systems(Startup, setup)
+        .add_plugins(CameraPlugin)
         .add_plugins((LoaderPlugin, VoxxelPlugin, PlayerPlugin))
         .add_plugins(PhysicsPlugins::default())
         //.add_plugins(PhysicsDebugPlugin::default())
