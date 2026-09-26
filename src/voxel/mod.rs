@@ -4,12 +4,13 @@ use avian3d::prelude::*;
 
 use std::collections::HashMap;
 
-mod block;
-mod chunk;
+pub mod block;
+pub mod chunk;
 mod meshing;
 mod tarrain;
 mod components;
 mod spawning;
+mod chunk_data;
 
 use chunk::*;
 use meshing::*;
@@ -24,11 +25,19 @@ pub struct VoxxelPlugin;
 impl Plugin for VoxxelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkMap>();
+        app.init_resource::<ChunkData>();
         //app.add_systems(OnEnter(AppState::InGame), (spawn_test_chunk));
 
-        app.add_systems(OnEnter(AppState::InGame), (spawn_chunks_around_player).run_if(in_state(AppState::InGame)));
+        app.add_systems(OnEnter(AppState::InGame), (generate_chunk_data_aroud_player, spawn_chunks_around_player).run_if(in_state(AppState::InGame)));
     }
 }
+// Basically ein chunk manager
+#[derive(Resource, Default)]
+pub struct ChunkMap(pub HashMap<ChunkPos, Entity>);
+
+// Speichert alle Chunk daten 
+#[derive(Resource, Default)]
+pub struct ChunkData(pub HashMap<ChunkPos, Chunk>);
 
 // Wird vor allem geladen 
 #[derive(Resource)]
@@ -39,10 +48,7 @@ pub struct ChunkParams<'w, 's> {
     pub commands: Commands<'w, 's>,
     pub meshes: ResMut<'w, Assets<Mesh>>,
     pub chunk_map: ResMut<'w, ChunkMap>,
+    pub chunk_data: ResMut<'w, ChunkData>,
     pub material: Res<'w, ChunkMaterial>,
 }
 
-
-// Basically ein chunk manager
-#[derive(Resource, Default)]
-pub struct ChunkMap(pub HashMap<IVec3, Entity>);

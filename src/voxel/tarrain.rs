@@ -14,7 +14,7 @@ pub fn test_tarrain(chunk: &mut Chunk) {
                 if x == 3 && z == 3 {
                     chunk.set(x, y, z, BlockType::Stone);
                 }
-                if x > z {
+                if x > y {
                     chunk.set(x, y, z, BlockType::Stone);
                 }
             }

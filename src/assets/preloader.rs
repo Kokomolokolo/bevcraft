@@ -9,7 +9,7 @@ pub fn setup_chunk_material(
 ) {
     let handle = materials.add(StandardMaterial {
             base_color: Color::srgb(0.5, 0.5, 0.5),
-            cull_mode: None,
+            //cull_mode: None,
             //unlit: true,
             ..default()
         });
