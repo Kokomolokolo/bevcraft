@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use bevy::input::mouse::MouseMotion;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
+use crate::player::Player;
+
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
@@ -39,10 +41,14 @@ pub fn setup_camera(
     cursor_options.grab_mode = CursorGrabMode::Locked;
     cursor_options.visible = false;
 
+    //commands.spawn(Camera2d::default());
+    
     commands.spawn((
         Camera3d::default(),
+        //Camera::default(),
         Transform::from_xyz(0.0, 0.0, 8.0).looking_at(Vec3::ZERO, Vec3::Y),
         FpsCamera::default(),
+        Player
     ));
 }
 

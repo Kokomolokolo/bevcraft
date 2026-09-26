@@ -1,18 +1,18 @@
-use bevy::{math::VectorSpace, prelude::*};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, math::VectorSpace, prelude::*};
 use avian3d::prelude::*;
 
 mod voxel;
-mod mesh;
 mod player;
 mod assets;
 mod camera;
 mod world;
+mod gui;
 
 use voxel::VoxxelPlugin;
 use player::PlayerPlugin;
 use assets::LoaderPlugin;
 use camera::CameraPlugin;
-use voxel::ChunkMap;
+use gui::GUIPlugin;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum AppState {
@@ -25,10 +25,11 @@ pub enum AppState {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .init_state::<AppState>()
         .add_systems(Startup, setup)
         .add_plugins(CameraPlugin)
-        .add_plugins((LoaderPlugin, VoxxelPlugin, PlayerPlugin))
+        .add_plugins((LoaderPlugin, VoxxelPlugin, PlayerPlugin, GUIPlugin))
         .add_plugins(PhysicsPlugins::default())
         //.add_plugins(PhysicsDebugPlugin::default())
         .run();
