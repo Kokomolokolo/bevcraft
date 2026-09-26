@@ -26,7 +26,7 @@ impl ChunkData {
                 offset.2 + coord.2,
             );
             if let Some(offset_chunk) = self.0.get(&ChunkPos(offset_pos)) {
-                return_map.insert(pos, offset_chunk);
+                return_map.insert(ChunkPos(offset_pos), offset_chunk);
             }
         }
 

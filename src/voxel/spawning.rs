@@ -59,9 +59,11 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
 
     // Chunk sowie die neighbors werden geholt
     let neighbor_data = spawner.chunk_data.get_chunk_and_neighbors(pos);
-
-    let mesh = build_chunk_mesh(&chunk);
-
+    
+    let chunk = neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt
+    
+    let mesh = build_chunk_mesh(&chunk, &pos, neighbor_data);
+    println!("Builing mesh");
     let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
     let handle = spawner.meshes.add(mesh);
 

@@ -1,12 +1,13 @@
+use std::collections::HashMap;
+
 use bevy::{asset::RenderAssetUsages, prelude::*};
 
 use crate::voxel::{
-    block::BlockType,
-    chunk::{Chunk, CHUNK_SIZE},
+    block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos,
 };
 
 /// Baut das komplette Mesh für einen Chunk
-pub fn build_chunk_mesh(chunk: &Chunk) -> Mesh {
+pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: HashMap<ChunkPos, &Chunk>) -> Mesh {
     let mut vertices: Vec<[f32; 3]> = Vec::new();
     let mut normals: Vec<[f32; 3]> = Vec::new();
     let mut uvs: Vec<[f32; 2]> = Vec::new();
@@ -24,12 +25,12 @@ pub fn build_chunk_mesh(chunk: &Chunk) -> Mesh {
                 let pos = Vec3::new(x as f32, y as f32, z as f32);
 
                 // Wenn der Nachtbar nicht solid ist also Luft, Wasser etc.
-                let render_top = !get_safe_block(chunk, x as i32, y as i32 + 1, z as i32).is_solid();
-                let render_bottom = !get_safe_block(chunk, x as i32, y as i32 - 1, z as i32).is_solid();
-                let render_right = !get_safe_block(chunk, x as i32 + 1, y as i32, z as i32).is_solid();
-                let render_left = !get_safe_block(chunk, x as i32 - 1, y as i32, z as i32).is_solid();
-                let render_back = !get_safe_block(chunk, x as i32, y as i32, z as i32 - 1).is_solid();
-                let render_front = !get_safe_block(chunk, x as i32, y as i32, z as i32 + 1).is_solid();
+                let render_top = !get_safe_block(chunk_pos, x as i32, y as i32 + 1, z as i32, &chunk_neighbor).is_solid();
+                let render_bottom = !get_safe_block(chunk_pos, x as i32, y as i32 - 1, z as i32, &chunk_neighbor).is_solid();
+                let render_right = !get_safe_block(chunk_pos, x as i32 + 1, y as i32, z as i32, &chunk_neighbor).is_solid();
+                let render_left = !get_safe_block(chunk_pos, x as i32 - 1, y as i32, z as i32, &chunk_neighbor).is_solid();
+                let render_back = !get_safe_block(chunk_pos, x as i32, y as i32, z as i32 - 1, &chunk_neighbor).is_solid();
+                let render_front = !get_safe_block(chunk_pos, x as i32, y as i32, z as i32 + 1, &chunk_neighbor).is_solid();
                 
                 add_faces(
                     pos, 
@@ -72,21 +73,28 @@ pub fn build_chunk_mesh(chunk: &Chunk) -> Mesh {
 }
 
 fn get_safe_block(
-    chunk: &Chunk,
+    chunk_pos: &ChunkPos,
     x: i32, 
     y: i32,
-    z: i32
+    z: i32,
+    neighbors: &HashMap<ChunkPos, &Chunk>,
 ) -> BlockType {
-    if x < 0 ||
-        y < 0 ||
-        z < 0 ||
-        x >= CHUNK_SIZE as i32 ||
-        y >= CHUNK_SIZE as i32 ||
-        z >= CHUNK_SIZE as i32
-        {
-            return BlockType::Air;
-        }
-    return chunk.get(x as usize, y as usize, z as usize);
+    let chunk_offset = IVec3::new(
+        x.div_euclid(CHUNK_SIZE as i32), 
+        y.div_euclid(CHUNK_SIZE as i32), 
+        z.div_euclid(CHUNK_SIZE as i32)
+    );
+
+    let local_x = x.rem_euclid(CHUNK_SIZE as i32) as usize;
+    let local_y = y.rem_euclid(CHUNK_SIZE as i32) as usize;
+    let local_z = z.rem_euclid(CHUNK_SIZE as i32) as usize;
+
+    let target_chunk_pos = ChunkPos(chunk_pos.0 + chunk_offset);
+    
+    match neighbors.get(&target_chunk_pos) {
+        Some(chunk) => chunk.get(local_x, local_y, local_z),
+        None => BlockType::Air // Zur Not immer Luft
+    }
 }
 
 fn add_faces(

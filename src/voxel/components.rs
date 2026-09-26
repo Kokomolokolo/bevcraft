@@ -14,6 +14,13 @@ impl ChunkPos {
             (self.0.y * CHUNK_SIZE as i32) as f32, 
             (self.0.z * CHUNK_SIZE as i32) as f32)
     }
+    pub fn from_world(x: i32, y: i32, z: i32) -> ChunkPos {
+        Self(IVec3::new(
+            x.div_euclid(CHUNK_SIZE as i32),
+            y.div_euclid(CHUNK_SIZE as i32),
+            z.div_euclid(CHUNK_SIZE as i32),
+        ))
+    }
     pub fn to_tupel(&self) -> (i32, i32, i32) {
         (self.0.x, self.0.y, self.0.z)
     }
