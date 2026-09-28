@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::{asset::RenderAssetUsages, prelude::*};
 
 use crate::voxel::{
-    block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos,
+    block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, texture::{calculate_uvs, get_atlas_cords},
 };
 
 /// Baut das komplette Mesh für einen Chunk
@@ -12,6 +12,7 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
     let mut normals: Vec<[f32; 3]> = Vec::new();
     let mut uvs: Vec<[f32; 2]> = Vec::new();
     let mut indices: Vec<u32> = Vec::new();
+    let mut colors: Vec<[f32; 4]> = Vec::new();
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
@@ -31,19 +32,20 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
                 let render_left = !get_safe_block(chunk_pos, x as i32 - 1, y as i32, z as i32, &chunk_neighbor).is_solid();
                 let render_back = !get_safe_block(chunk_pos, x as i32, y as i32, z as i32 - 1, &chunk_neighbor).is_solid();
                 let render_front = !get_safe_block(chunk_pos, x as i32, y as i32, z as i32 + 1, &chunk_neighbor).is_solid();
-                
+
                 add_faces(
-                    pos, 
-                    block, 
-                    &mut vertices, 
-                    &mut normals, 
-                    &mut indices, 
+                    pos,
+                    block,
+                    &mut vertices,
+                    &mut normals,
+                    &mut indices,
                     &mut uvs,
-                    render_top, 
-                    render_bottom, 
-                    render_right, 
-                    render_left, 
-                    render_back, 
+                    &mut colors,
+                    render_top,
+                    render_bottom,
+                    render_right,
+                    render_left,
+                    render_back,
                     render_front
                 );
             }
@@ -70,18 +72,21 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
     .with_inserted_indices(
         bevy::mesh::Indices::U32(indices)
     )
+    .with_inserted_attribute(
+        Mesh::ATTRIBUTE_COLOR, colors
+    )
 }
 
 fn get_safe_block(
     chunk_pos: &ChunkPos,
-    x: i32, 
+    x: i32,
     y: i32,
     z: i32,
     neighbors: &HashMap<ChunkPos, &Chunk>,
 ) -> BlockType {
     let chunk_offset = IVec3::new(
-        x.div_euclid(CHUNK_SIZE as i32), 
-        y.div_euclid(CHUNK_SIZE as i32), 
+        x.div_euclid(CHUNK_SIZE as i32),
+        y.div_euclid(CHUNK_SIZE as i32),
         z.div_euclid(CHUNK_SIZE as i32)
     );
 
@@ -90,7 +95,7 @@ fn get_safe_block(
     let local_z = z.rem_euclid(CHUNK_SIZE as i32) as usize;
 
     let target_chunk_pos = ChunkPos(chunk_pos.0 + chunk_offset);
-    
+
     match neighbors.get(&target_chunk_pos) {
         Some(chunk) => chunk.get(local_x, local_y, local_z),
         None => BlockType::Air // Zur Not immer Luft
@@ -99,11 +104,12 @@ fn get_safe_block(
 
 fn add_faces(
     pos: Vec3,
-    _block_type: BlockType,
+    block_type: BlockType,
     vertices: &mut Vec<[f32; 3]>,
     normals: &mut Vec<[f32; 3]>,
     indices: &mut Vec<u32>,
     uvs: &mut Vec<[f32; 2]>,
+    colors: &mut Vec<[f32; 4]>,
     render_top: bool,
     render_bottom: bool,
     render_right: bool,
@@ -125,8 +131,12 @@ fn add_faces(
             [x, y + 1.0, z],
         ]);
         normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
         indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+        // texturing
+        let (atlas_x, atlas_y) = get_atlas_cords(block_type, "top");
+        let uv_cords = calculate_uvs(atlas_x, atlas_y);
+        uvs.extend_from_slice(&uv_cords);
     }
 
     // BOTTOM (-Y)
@@ -139,8 +149,12 @@ fn add_faces(
             [x, y, z + 1.0],
         ]);
         normals.extend_from_slice(&[[0.0, -1.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
         indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        colors.extend_from_slice(&[[0.6; 4]; 4]);
+        // texturing
+        let (atlas_x, atlas_y) = get_atlas_cords(block_type, "bottom");
+        let uv_cords = calculate_uvs(atlas_x, atlas_y);
+        uvs.extend_from_slice(&uv_cords);
     }
 
     // RIGHT (+X)
@@ -153,8 +167,12 @@ fn add_faces(
             [x + 1.0, y + 1.0, z + 1.0],
         ]);
         normals.extend_from_slice(&[[1.0, 0.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]]);
         indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        colors.extend_from_slice(&[[0.7; 4]; 4]);
+        // texturing
+        let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+        let uv_cords = calculate_uvs(atlas_x, atlas_y);
+        uvs.extend_from_slice(&uv_cords);
     }
 
     // LEFT (-X)
@@ -167,8 +185,12 @@ fn add_faces(
             [x, y + 1.0, z],
         ]);
         normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
-        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
         indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        colors.extend_from_slice(&[[0.7; 4]; 4]);
+        // texturing
+        let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+        let uv_cords = calculate_uvs(atlas_x, atlas_y);
+        uvs.extend_from_slice(&uv_cords);
     }
 
     // FRONT (+Z)
@@ -181,8 +203,12 @@ fn add_faces(
             [x, y + 1.0, z + 1.0],
         ]);
         normals.extend_from_slice(&[[0.0, 0.0, 1.0]; 4]);
-        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
         indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        colors.extend_from_slice(&[[0.7; 4]; 4]);
+        // texturing
+        let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+        let uv_cords = calculate_uvs(atlas_x, atlas_y);
+        uvs.extend_from_slice(&uv_cords);
     }
 
     // BACK (-Z)
@@ -195,7 +221,11 @@ fn add_faces(
             [x + 1.0, y + 1.0, z],
         ]);
         normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
-        uvs.extend_from_slice(&[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]]);
         indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        colors.extend_from_slice(&[[0.6; 4]; 4]); // Leicht dunkler für bessere Kontur
+        // texturing
+        let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+        let uv_cords = calculate_uvs(atlas_x, atlas_y);
+        uvs.extend_from_slice(&uv_cords);
     }
 }

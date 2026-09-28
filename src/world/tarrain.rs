@@ -14,23 +14,12 @@ impl WorldGenerator {
                 let world_x = chunk_offset.x + x as f32;
                 let world_z = chunk_offset.z + z as f32;
                 let noise_value = self.noise.get([world_x as f64 * 0.05, world_z as f64 * 0.05]) as f32;
-                let height = ((noise_value * 10.) + 10.).max(0.0) as usize;
+                let height = ((noise_value * 10.) + 10.).max(2.0) as usize;
 
-                
                 for y in 0..CHUNK_SIZE {
-
                     if y < height as usize {
                         chunk.set(x, y, z, BlockType::Stone);
                     }
-                    //if y < 2 {
-                    //    chunk.set(x, y, z, BlockType::Stone)
-                    //}
-                    //if x == 3 && z == 3 {
-                    //    chunk.set(x, y, z, BlockType::Stone);
-                    //}
-                    //if x > y {
-                    //    chunk.set(x, y, z, BlockType::Stone);
-                    //}
                 }
             }
         }

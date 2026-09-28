@@ -11,6 +11,7 @@ mod tarrain;
 pub mod components;
 mod spawning;
 mod chunk_data;
+mod texture;
 
 use chunk::*;
 use meshing::*;
@@ -26,8 +27,6 @@ impl Plugin for VoxxelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkMap>();
         app.init_resource::<ChunkData>();
-        //app.add_systems(OnEnter(AppState::InGame), (spawn_test_chunk));
-
         app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player).run_if(in_state(AppState::InGame)));
     }
 }

@@ -1,6 +1,6 @@
 use bevy::{prelude::*};
 
-use crate::{AppState, voxel::ChunkMaterial};
+use crate::{AppState, assets::BevcraftAssets, voxel::ChunkMaterial};
 
 pub fn setup_chunk_material(
     mut commands: Commands,
@@ -16,4 +16,17 @@ pub fn setup_chunk_material(
         commands.insert_resource(ChunkMaterial(handle));
     println!("Next State");
     next_state.set(AppState::InGame);
+}
+
+pub fn load_assets(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    
+) {
+    let atlas = asset_server.load("textures/texture_atlas.png");
+
+    commands.insert_resource(BevcraftAssets {
+        atlas
+    });
+    println!("Loaded atlas.")
 }

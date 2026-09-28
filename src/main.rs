@@ -48,3 +48,16 @@ fn setup(
     ));
     commands.insert_resource(ClearColor(Color::srgb(0.5, 0.6, 0.99)));
 }
+
+// TODO
+// Weltgeneration
+// Texturen
+// Tiere
+// Inventar
+// Frustrum culling
+// Bessere Performance
+// Spieler Blöcke abbauen, Springen, Springen, FOV Changes
+// Fog, 
+// Main Menu
+// World Saving
+// Settings
