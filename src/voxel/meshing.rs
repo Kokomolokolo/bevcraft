@@ -5,9 +5,14 @@ use bevy::{asset::RenderAssetUsages, prelude::*};
 use crate::voxel::{
     block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, texture::{calculate_uvs, get_atlas_cords},
 };
-
+/// ==================================================================
 /// Baut das komplette Mesh für einen Chunk
+/// ==================================================================
+
 pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: HashMap<ChunkPos, &Chunk>) -> Mesh {
+    // Buffer statt die Hashmap, spaart cup zeit
+    let buffer = create_padded_buffer(chunk, chunk_pos, &chunk_neighbor);
+
     let mut vertices: Vec<[f32; 3]> = Vec::new();
     let mut normals: Vec<[f32; 3]> = Vec::new();
     let mut uvs: Vec<[f32; 2]> = Vec::new();
@@ -17,6 +22,11 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
+                
+                let px = x + 1; // Da der Buffer bei -1 Beginnt
+                let py = y + 1;
+                let pz = z + 1;
+                
                 let block = chunk.get(x, y, z);
 
                 // Luft hat kein Mesh
@@ -26,12 +36,12 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
                 let pos = Vec3::new(x as f32, y as f32, z as f32);
 
                 // Wenn der Nachtbar nicht solid ist also Luft, Wasser etc.
-                let render_top = !get_safe_block(chunk_pos, x as i32, y as i32 + 1, z as i32, &chunk_neighbor).is_solid();
-                let render_bottom = !get_safe_block(chunk_pos, x as i32, y as i32 - 1, z as i32, &chunk_neighbor).is_solid();
-                let render_right = !get_safe_block(chunk_pos, x as i32 + 1, y as i32, z as i32, &chunk_neighbor).is_solid();
-                let render_left = !get_safe_block(chunk_pos, x as i32 - 1, y as i32, z as i32, &chunk_neighbor).is_solid();
-                let render_back = !get_safe_block(chunk_pos, x as i32, y as i32, z as i32 - 1, &chunk_neighbor).is_solid();
-                let render_front = !get_safe_block(chunk_pos, x as i32, y as i32, z as i32 + 1, &chunk_neighbor).is_solid();
+                let render_top = !buffer[pad_idx(px, py + 1, pz)].is_solid();
+                let render_bottom = !buffer[pad_idx(px, py - 1, pz)].is_solid();
+                let render_right = !buffer[pad_idx(px + 1, py, pz)].is_solid();
+                let render_left = !buffer[pad_idx(px - 1, py, pz)].is_solid();
+                let render_back = !buffer[pad_idx(px, py, pz - 1)].is_solid();
+                let render_front = !buffer[pad_idx(px, py, pz + 1)].is_solid();
 
                 add_faces(
                     pos,
@@ -76,6 +86,9 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
         Mesh::ATTRIBUTE_COLOR, colors
     )
 }
+/// ==================================================================
+/// HILFSFUNKTIONEN
+/// ==================================================================
 
 fn get_safe_block(
     chunk_pos: &ChunkPos,
@@ -100,6 +113,43 @@ fn get_safe_block(
         Some(chunk) => chunk.get(local_x, local_y, local_z),
         None => BlockType::Air // Zur Not immer Luft
     }
+}
+const PADDED_SIZE: usize = CHUNK_SIZE + 2;
+pub type PaddedBuffer = [BlockType; PADDED_SIZE.pow(3)];
+
+#[inline(always)] // Minimale Operation
+pub fn pad_idx(x: usize, y: usize, z: usize) -> usize { // Erstellt aus 3 Koordinaten einen Index
+    x + y * PADDED_SIZE + z * PADDED_SIZE * PADDED_SIZE
+}
+fn create_padded_buffer(
+    chunk: &Chunk,
+    chunk_pos: &ChunkPos,
+    neighbors: &HashMap<ChunkPos, &Chunk>
+) -> PaddedBuffer {
+    let mut buffer = [BlockType::Air; PADDED_SIZE.pow(3)];
+
+    for pad_x in 0..PADDED_SIZE {
+        for pad_y in 0..PADDED_SIZE {
+            for pad_z in 0..PADDED_SIZE {
+                // Chunk Koordinaten
+                let x = pad_x as i32 -1;
+                let y = pad_y as i32 -1;
+                let z = pad_z as i32 -1;
+
+                let block: BlockType = if (0..CHUNK_SIZE as i32).contains(&x)
+                    && (0..CHUNK_SIZE as i32).contains(&y)
+                    && (0..CHUNK_SIZE as i32).contains(&z) {
+                    chunk.get(x as usize, y as usize, z as usize)
+                } else {
+                    // An den Ränder aus den Nachbarchunk holen
+                    get_safe_block(chunk_pos, x, y, z, neighbors)
+                };
+
+                buffer[pad_idx(pad_x, pad_y, pad_z)] = block;
+            }
+        }
+    }
+    buffer
 }
 
 fn add_faces(

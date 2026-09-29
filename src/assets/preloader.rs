@@ -19,9 +19,9 @@ pub fn setup_block_material(
     
     let handle = materials.add(StandardMaterial {
             base_color_texture: Some(atlas),
-            perceptual_roughness: 0.5,
+            perceptual_roughness: 0.7,
             metallic: 0.0,
-            reflectance: 0.3,
+            reflectance: 0.1,
             // base_color: Color::srgb(0.5, 0.5, 0.5),
             //cull_mode: None,
             //unlit: true,

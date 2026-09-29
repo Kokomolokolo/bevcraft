@@ -29,21 +29,24 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     
     for x in -RENDER_DISTANCE..=RENDER_DISTANCE {
         for z in -RENDER_DISTANCE..=RENDER_DISTANCE {
-            
-            let chunk_pos = IVec3::new(x, 0, z) + player_chunk;
-            let pos = ChunkPos(chunk_pos);
 
-            // Wurde bereits gespawnt
-            if spawner.chunk_map.0.contains_key(&pos) {
-                continue;
+            for y in 0..WORLD_HEIGHT {
+                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
+                let pos = ChunkPos(chunk_pos);
+    
+                // Wurde bereits gespawnt
+                if spawner.chunk_map.0.contains_key(&pos) {
+                    continue;
+                }
+                
+                spawn_chunk(&mut spawner, chunk_pos);
+                spawned_this_frame += 1;
+    
+                if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
+                    return;
+                }
             }
             
-            spawn_chunk(&mut spawner, chunk_pos);
-            spawned_this_frame += 1;
-
-            if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
-                return;
-            }
         }
     }
     let elapsed = now.elapsed();
@@ -70,8 +73,10 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     const DATA_RENDER_DISTANCE: i32 = RENDER_DISTANCE + 2;
     for x in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
         for z in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
-            let chunk_pos = IVec3::new(x, 0, z) + player_chunk;
-            generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
+            for y in 0..WORLD_HEIGHT {            
+                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
+                generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
+            }
         }
     }
     let elapsed = now.elapsed();
@@ -109,7 +114,14 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     
     let chunk = neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt
     
+    if chunk.is_empty() {
+        // Leere Chunks brauchen kein Mesh
+        spawner.chunk_map.0.insert(pos, None);
+        return;
+    }
+    
     let mesh = build_chunk_mesh(&chunk, &pos, neighbor_data);
+
     //let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
     let handle = spawner.meshes.add(mesh);
 
@@ -123,5 +135,5 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
         pos,
     )).id();
 
-    spawner.chunk_map.0.insert(pos, entity);
+    spawner.chunk_map.0.insert(pos, Some(entity));
 }

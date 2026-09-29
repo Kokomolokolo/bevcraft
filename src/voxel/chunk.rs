@@ -21,4 +21,7 @@ impl Chunk {
     pub fn set(&mut self, x: usize, y: usize, z: usize, block: BlockType) {
         self.blocks[Self::index(x, y, z)] = block
     }
+    pub fn is_empty(&self) -> bool {
+        self.blocks.iter().all(|b| *b == BlockType::Air)
+    }
 }

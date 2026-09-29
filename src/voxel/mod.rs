@@ -7,7 +7,6 @@ use std::collections::HashMap;
 pub mod block;
 pub mod chunk;
 mod meshing;
-mod tarrain;
 pub mod components;
 mod spawning;
 mod chunk_data;
@@ -15,7 +14,6 @@ mod texture;
 
 use chunk::*;
 use meshing::*;
-use tarrain::*;
 use spawning::*;
 use components::*;
 
@@ -32,7 +30,7 @@ impl Plugin for VoxxelPlugin {
 }
 // Basically ein chunk manager
 #[derive(Resource, Default)]
-pub struct ChunkMap(pub HashMap<ChunkPos, Entity>);
+pub struct ChunkMap(pub HashMap<ChunkPos, Option<Entity>>); // Eine Option für leere Chunks => leere Meshes
 
 // Speichert alle Chunk daten 
 #[derive(Resource, Default)]

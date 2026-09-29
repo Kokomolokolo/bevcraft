@@ -13,8 +13,8 @@ use crate::AppState;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        //app.add_systems(OnEnter(AppState::InGame), spawn_player);
-        //app.add_systems(Update, (player_movement, player_look, lock_cursor_on_click, player_jump).run_if(in_state(AppState::InGame)));
+        // app.add_systems(OnEnter(AppState::InGame), spawn_player);
+        // app.add_systems(Update, (player_movement, player_look, lock_cursor_on_click, player_jump).run_if(in_state(AppState::InGame)));
     }
 }
 
@@ -26,7 +26,7 @@ fn spawn_player(
         RigidBody::Dynamic,
         Collider::capsule(0.5, 1.8),
         LockedAxes::ROTATION_LOCKED,
-        Transform::from_xyz(5.0, 14.0, 5.0),
+        Transform::from_xyz(5.0, 200.0, 5.0),
         ShapeCaster::new(
             Collider::sphere(0.4),
             Vec3::new(0.0, -1.35, 0.0), // knapp oberhalb der tatsächlichen Fußsohle (Zentrum minus ~1.4)

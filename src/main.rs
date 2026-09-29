@@ -38,8 +38,6 @@ fn main() {
 
 fn setup(
     mut commands: Commands, 
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands.spawn((
         DirectionalLight::default(),
