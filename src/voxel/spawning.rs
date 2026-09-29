@@ -7,7 +7,8 @@ use avian3d::prelude::*;
 
 use crate::{player::Player, voxel::{ChunkData, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
 
-const RENDER_DISTANCE: i32 = 10;
+const RENDER_DISTANCE: i32 = 20;
+const WORLD_HEIGHT: i32 = 5;
 
 pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Transform, With<Player>>) { // Also erstmal nur so spawne
     use std::time::Instant;
@@ -23,14 +24,26 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     );
 
     // Lazy chunk loading - TODO
-    const MAX_CHUNKS_PER_FRAME: i32 = 100;
+    const MAX_CHUNKS_PER_FRAME: i32 = 20;
     let mut spawned_this_frame = 0;
     
     for x in -RENDER_DISTANCE..=RENDER_DISTANCE {
         for z in -RENDER_DISTANCE..=RENDER_DISTANCE {
+            
             let chunk_pos = IVec3::new(x, 0, z) + player_chunk;
+            let pos = ChunkPos(chunk_pos);
+
+            // Wurde bereits gespawnt
+            if spawner.chunk_map.0.contains_key(&pos) {
+                continue;
+            }
+            
             spawn_chunk(&mut spawner, chunk_pos);
             spawned_this_frame += 1;
+
+            if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
+                return;
+            }
         }
     }
     let elapsed = now.elapsed();

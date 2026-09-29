@@ -25,7 +25,7 @@ pub enum AppState {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // das könnte man mal aufräumen aber es geht irgendwie nicht so wirklich   
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .init_state::<AppState>()
         .add_systems(Startup, setup)

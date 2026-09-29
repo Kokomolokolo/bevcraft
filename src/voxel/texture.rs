@@ -6,9 +6,10 @@ use crate::voxel::block::BlockType;
 pub fn get_atlas_cords(block_type: BlockType, face: &str) -> (usize, usize) {
     match (block_type, face) {
         (BlockType::Stone, _) => (0, 0),
-        (BlockType::Grass, "top") => (0, 4),
-        (BlockType::Grass, "side") => (0, 3),
-        (BlockType::Grass, "bottom") => (0, 2),
+        (BlockType::Grass, "top") => (3, 0),
+        (BlockType::Grass, "side") => (2, 0),
+        (BlockType::Grass, "bottom") => (1, 0),
+        (BlockType::Dirt, _) => (1, 0),
         (_, _) => (10, 10)
     }
 }
@@ -23,10 +24,10 @@ pub fn calculate_uvs(atlas_x: usize, atlas_y: usize) -> [[f32; 2]; 4] {
     let min_v = atlas_y as f32 * uv_step;
     let max_v = (atlas_y + 1) as f32 * uv_step;
 
-    [
-        [min_u, max_v], // 0: unten links
-        [max_u, max_v], // 1: unten rechts
-        [max_u, min_v], // 2: oben rechts
-        [min_u, min_v], // 3: oben links
+    [ // Komentare sind falsch das ist mir alles suspekt
+        [min_u, max_v], // 0: 
+        [max_u, max_v], // 1: 
+        [max_u, min_v], // 3: 
+        [min_u, min_v], // 2: 
     ]
 }

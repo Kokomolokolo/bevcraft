@@ -10,7 +10,7 @@ use crate::AppState;
 
 impl Plugin for LoaderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (load_assets, setup_chunk_material).chain());
+        app.add_systems(Startup, setup_block_material);
         //app.init_resource::<BevcraftAssets>();
     }
 }

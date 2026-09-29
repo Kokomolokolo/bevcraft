@@ -17,8 +17,16 @@ impl WorldGenerator {
                 let height = ((noise_value * 10.) + 10.).max(2.0) as usize;
 
                 for y in 0..CHUNK_SIZE {
-                    if y < height as usize {
-                        chunk.set(x, y, z, BlockType::Stone);
+                    if y <= height as usize {
+                        if y == height {
+                            chunk.set(x, y, z, BlockType::Grass);
+                        } 
+                        else if height > 5 {
+                            chunk.set(x, y, z, BlockType::Stone);
+                        }
+                        else {
+                            chunk.set(x, y, z, BlockType::Dirt);
+                        }
                     }
                 }
             }
