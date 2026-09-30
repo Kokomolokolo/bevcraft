@@ -13,7 +13,8 @@ impl WorldGenerator {
             for z in 0..CHUNK_SIZE {
                 let world_x = chunk_offset.x + x as f32; // world y erst später berechnen. Erstmal nehme wir für die generierung den y wert nicht mit rein.
                 let world_z = chunk_offset.z + z as f32;
-                let noise_value = self.noise.get([world_x as f64 * 0.05, world_z as f64 * 0.05]) as f32;
+                let climate = self.get_climate(x as f32, z as f32);
+                let noise_value = self.tarrain_noise.get([world_x as f64 * 0.05, world_z as f64 * 0.05]) as f32;
                 let height = ((noise_value * 20.) + 40.).max(0.1) as usize;
                 
                 for y in 0..CHUNK_SIZE {

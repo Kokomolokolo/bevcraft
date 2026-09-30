@@ -5,7 +5,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use avian3d::prelude::*;
 
-use crate::{player::Player, voxel::{ChunkData, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
+use crate::{player::Player, voxel::{ChunkData, ChunkMap, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
 
 const RENDER_DISTANCE: i32 = 20;
 const WORLD_HEIGHT: i32 = 5;
@@ -18,9 +18,9 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     let Ok(player_transform) = player_q.single() else { return; };
 
     let player_chunk = IVec3::new(
-        (player_transform.translation.x / CHUNK_SIZE as f32) as i32, 
+        (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32, 
         0, 
-        (player_transform.translation.z / CHUNK_SIZE as f32) as i32
+        (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
     );
 
     // Lazy chunk loading - TODO
@@ -50,7 +50,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
         }
     }
     let elapsed = now.elapsed();
-    if elapsed > Duration::from_millis(3) {
+    if elapsed > Duration::from_millis(0) {
         println!("Time to spawn chunks: {:.2?}", elapsed);
     }
 }
@@ -73,7 +73,7 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     const DATA_RENDER_DISTANCE: i32 = RENDER_DISTANCE + 2;
     for x in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
         for z in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
-            for y in 0..WORLD_HEIGHT {            
+            for y in 0..WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
                 generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
             }
@@ -81,7 +81,7 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     }
     let elapsed = now.elapsed();
     if elapsed > Duration::from_millis(1) {
-        println!("Time to generate chunk data: {:.2?}", elapsed);
+        //println!("Time to generate chunk data: {:.2?}", elapsed);
     }
 }
 
@@ -122,7 +122,8 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     
     let mesh = build_chunk_mesh(&chunk, &pos, neighbor_data);
 
-    //let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
+    // Mit collider braucht das bauen eines meshes mehr als 3x so lang. Deswegen erstmal raus
+    // let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
     let handle = spawner.meshes.add(mesh);
 
     // Chunk selbst spawnen
@@ -136,4 +137,43 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     )).id();
 
     spawner.chunk_map.0.insert(pos, Some(entity));
+}
+
+///===============================
+/// Despawning
+///===============================
+// muss noch überarbeitet werden, u.a. chunks auf allen höhen despawnen
+pub fn despawn_chunks(
+    mut chunk_data: ResMut<ChunkData>, 
+    mut chunk_map: ResMut<ChunkMap>, 
+    mut commands: Commands, 
+    player_q: Query<&Transform, With<Player>>
+) {
+    let Ok(player_transform) = player_q.single() else { return; };
+    
+    let player_chunk = IVec3::new(
+        (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32,
+        0, // Egal, da alle Chunks auf jeder Höhe despawnt werden
+        (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32 
+    );
+
+    // Da sonst 2 mut zugriffe
+    let mut to_remove: Vec<ChunkPos> = Vec::new();
+    
+    for (chunk_pos, entity) in chunk_map.0.iter() {
+        if (player_chunk.x - chunk_pos.0.x).abs() > RENDER_DISTANCE + 5 
+        || (player_chunk.z - chunk_pos.0.z).abs() > RENDER_DISTANCE + 5
+        {
+            if let Some(entity) = entity { // Wenn wirklich ein entity da ist
+                // Kann sein das keins da ist wenn der chunk bspw. leer ist
+                commands.entity(*entity).despawn();
+            }
+            to_remove.push(*chunk_pos);
+        }
+    }
+    // Aus den Resourcen entfernen
+    for pos in to_remove {
+        chunk_map.0.remove(&pos);
+        //chunk_data.0.remove(&pos);
+    }
 }

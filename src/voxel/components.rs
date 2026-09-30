@@ -24,4 +24,7 @@ impl ChunkPos {
     pub fn to_tupel(&self) -> (i32, i32, i32) {
         (self.0.x, self.0.y, self.0.z)
     }
+    pub fn to_vec3(&self) -> Vec3 {
+        Vec3::new(self.0.x as f32, self.0.y as f32 , self.0.z as f32)
+    }
 }

@@ -1,6 +1,5 @@
-use bevy::{gltf::gltf_ext::material, prelude::*};
+use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
-use avian3d::prelude::*;
 
 use std::collections::HashMap;
 
@@ -25,7 +24,7 @@ impl Plugin for VoxxelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkMap>();
         app.init_resource::<ChunkData>();
-        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player).run_if(in_state(AppState::InGame)));
+        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, despawn_chunks).chain().run_if(in_state(AppState::InGame)));
     }
 }
 // Basically ein chunk manager
