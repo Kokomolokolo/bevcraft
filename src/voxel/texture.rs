@@ -10,6 +10,8 @@ pub fn get_atlas_cords(block_type: BlockType, face: &str) -> (usize, usize) {
         (BlockType::Grass, "side") => (2, 0),
         (BlockType::Grass, "bottom") => (1, 0),
         (BlockType::Dirt, _) => (1, 0),
+        (BlockType::Sand, _) => (4, 0),
+        (BlockType::Water, _) => (5, 0),
         (_, _) => (10, 10)
     }
 }

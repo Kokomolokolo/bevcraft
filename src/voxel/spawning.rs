@@ -30,7 +30,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     for x in -RENDER_DISTANCE..=RENDER_DISTANCE {
         for z in -RENDER_DISTANCE..=RENDER_DISTANCE {
 
-            for y in 0..WORLD_HEIGHT {
+            for y in 0..=WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
                 let pos = ChunkPos(chunk_pos);
     
@@ -50,7 +50,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
         }
     }
     let elapsed = now.elapsed();
-    if elapsed > Duration::from_millis(0) {
+    if elapsed > Duration::from_millis(3) {
         println!("Time to spawn chunks: {:.2?}", elapsed);
     }
 }
@@ -73,7 +73,7 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     const DATA_RENDER_DISTANCE: i32 = RENDER_DISTANCE + 2;
     for x in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
         for z in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
-            for y in 0..WORLD_HEIGHT {
+            for y in 0..=WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
                 generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
             }
@@ -96,7 +96,7 @@ fn generate_chunk_data(pos: IVec3, chunk_data: &mut ChunkData, generator: &Res<W
     let mut chunk = Chunk::new();
 
     // Chunk wird nach generationsregeln bearbeitet
-    generator.test_tarrain(&mut chunk, pos);
+    generator.generate_chunk_tarrain(&mut chunk, pos);
     
     // Daten werden gepeichert
     chunk_data.0.insert(pos, chunk);
@@ -121,7 +121,10 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     }
     
     let mesh = build_chunk_mesh(&chunk, &pos, neighbor_data);
-
+    if mesh.count_vertices() == 0 {
+        spawner.chunk_map.0.insert(pos, None);
+        return;
+    }
     // Mit collider braucht das bauen eines meshes mehr als 3x so lang. Deswegen erstmal raus
     // let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
     let handle = spawner.meshes.add(mesh);
