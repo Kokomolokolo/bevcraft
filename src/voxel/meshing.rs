@@ -8,16 +8,44 @@ use crate::voxel::{
 /// ==================================================================
 /// Baut das komplette Mesh für einen Chunk
 /// ==================================================================
+#[derive(Default)]
+pub struct ChunkMeshData {
+    pub vertices: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub uvs: Vec<[f32; 2]>,
+    pub indices: Vec<u32>,
+    pub colors: Vec<[f32; 4]>,
+}
 
-pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: HashMap<ChunkPos, &Chunk>) -> Mesh {
+impl ChunkMeshData {
+    fn build(self) -> Mesh {
+        Mesh::new(
+            bevy::mesh::PrimitiveTopology::TriangleList,
+            RenderAssetUsages::MAIN_WORLD
+                | RenderAssetUsages::RENDER_WORLD,
+        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, self.vertices,)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL,self.normals,)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0,self.uvs,)
+        .with_inserted_indices(bevy::mesh::Indices::U32(self.indices))
+        .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, self.colors)
+    }
+    fn is_empty(&self) -> bool {
+        self.vertices.is_empty()
+    }
+}
+
+pub struct ChunkMeshResult {
+    pub opaque: Option<Mesh>,
+    pub transparent: Option<Mesh>,
+}
+
+pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: HashMap<ChunkPos, &Chunk>) -> ChunkMeshResult {
     // Buffer statt die Hashmap, spaart cup zeit
     let buffer = create_padded_buffer(chunk, chunk_pos, &chunk_neighbor);
 
-    let mut vertices: Vec<[f32; 3]> = Vec::new();
-    let mut normals: Vec<[f32; 3]> = Vec::new();
-    let mut uvs: Vec<[f32; 2]> = Vec::new();
-    let mut indices: Vec<u32> = Vec::new();
-    let mut colors: Vec<[f32; 4]> = Vec::new();
+    let mut opaque_data = ChunkMeshData::default();
+    let mut transparent_data = ChunkMeshData::default();
 
     for x in 0..CHUNK_SIZE {
         for y in 0..CHUNK_SIZE {
@@ -36,21 +64,24 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
                 let pos = Vec3::new(x as f32, y as f32, z as f32);
 
                 // Wenn der Nachtbar nicht solid ist also Luft, Wasser etc.
-                let render_top = !buffer[pad_idx(px, py + 1, pz)].is_solid();
-                let render_bottom = !buffer[pad_idx(px, py - 1, pz)].is_solid();
-                let render_right = !buffer[pad_idx(px + 1, py, pz)].is_solid();
-                let render_left = !buffer[pad_idx(px - 1, py, pz)].is_solid();
-                let render_back = !buffer[pad_idx(px, py, pz - 1)].is_solid();
-                let render_front = !buffer[pad_idx(px, py, pz + 1)].is_solid();
+                let render_top = should_render_face(block, buffer[pad_idx(px, py + 1, pz)]);
+                let render_bottom = should_render_face(block, buffer[pad_idx(px, py - 1, pz)]);
+                let render_right = should_render_face(block, buffer[pad_idx(px + 1, py, pz)]);
+                let render_left = should_render_face(block, buffer[pad_idx(px - 1, py, pz)]);
+                let render_back = should_render_face(block, buffer[pad_idx(px, py, pz - 1)]);
+                let render_front = should_render_face(block, buffer[pad_idx(px, py, pz + 1)]);
 
+                // Auf welches Mesh soll hinzugefügt werden?
+                let target_data = if block.is_transparent() {
+                    &mut transparent_data
+                } else {
+                    &mut opaque_data
+                };
+                
                 add_faces(
                     pos,
                     block,
-                    &mut vertices,
-                    &mut normals,
-                    &mut indices,
-                    &mut uvs,
-                    &mut colors,
+                    target_data,
                     render_top,
                     render_bottom,
                     render_right,
@@ -61,34 +92,25 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
             }
         }
     }
-
-    Mesh::new(
-        bevy::mesh::PrimitiveTopology::TriangleList,
-        RenderAssetUsages::MAIN_WORLD
-            | RenderAssetUsages::RENDER_WORLD,
-    )
-    .with_inserted_attribute(
-        Mesh::ATTRIBUTE_POSITION,
-        vertices,
-    )
-    .with_inserted_attribute(
-        Mesh::ATTRIBUTE_NORMAL,
-        normals,
-    )
-    .with_inserted_attribute(
-        Mesh::ATTRIBUTE_UV_0,
-        uvs,
-    )
-    .with_inserted_indices(
-        bevy::mesh::Indices::U32(indices)
-    )
-    .with_inserted_attribute(
-        Mesh::ATTRIBUTE_COLOR, colors
-    )
+    ChunkMeshResult { 
+        opaque: if opaque_data.is_empty() { None } else {Some(opaque_data.build())}, 
+        transparent: if transparent_data.is_empty() { None } else { Some(transparent_data.build()) } }
 }
 /// ==================================================================
 /// HILFSFUNKTIONEN
 /// ==================================================================
+
+fn should_render_face(curr: BlockType, neighbor: BlockType) -> bool {
+    if neighbor == BlockType::Air {
+        return true;
+    }
+
+    if curr.is_transparent() {
+        !neighbor.is_solid() && neighbor != curr
+    } else {
+        !neighbor.is_solid() || neighbor.is_transparent()
+    }
+}
 
 fn get_safe_block(
     chunk_pos: &ChunkPos,
@@ -155,11 +177,7 @@ fn create_padded_buffer(
 fn add_faces(
     pos: Vec3,
     block_type: BlockType,
-    vertices: &mut Vec<[f32; 3]>,
-    normals: &mut Vec<[f32; 3]>,
-    indices: &mut Vec<u32>,
-    uvs: &mut Vec<[f32; 2]>,
-    colors: &mut Vec<[f32; 4]>,
+    data: &mut ChunkMeshData,
     render_top: bool,
     render_bottom: bool,
     render_right: bool,
@@ -173,109 +191,109 @@ fn add_faces(
 
     // TOP (+Y)
     if render_top {
-        let base = vertices.len() as u32;
-        vertices.extend_from_slice(&[
+        let base = data.vertices.len() as u32;
+        data.vertices.extend_from_slice(&[
             [x, y + 1.0, z + 1.0],
             [x + 1.0, y + 1.0, z + 1.0],
             [x + 1.0, y + 1.0, z],
             [x, y + 1.0, z],
         ]);
-        normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
-        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+        data.normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
+        data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "top");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);
-        uvs.extend_from_slice(&uv_cords);
+        data.uvs.extend_from_slice(&uv_cords);
     }
 
     // BOTTOM (-Y)
     if render_bottom {
-        let base = vertices.len() as u32;
-        vertices.extend_from_slice(&[
+        let base = data.vertices.len() as u32;
+        data.vertices.extend_from_slice(&[
             [x, y, z],
             [x + 1.0, y, z],
             [x + 1.0, y, z + 1.0],
             [x, y, z + 1.0],
         ]);
-        normals.extend_from_slice(&[[0.0, -1.0, 0.0]; 4]);
-        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        colors.extend_from_slice(&[[0.6; 4]; 4]);
+        data.normals.extend_from_slice(&[[0.0, -1.0, 0.0]; 4]);
+        data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        data.colors.extend_from_slice(&[[0.6; 4]; 4]);
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "bottom");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);
-        uvs.extend_from_slice(&uv_cords);
+        data.uvs.extend_from_slice(&uv_cords);
     }
 
     // RIGHT (+X)
     if render_right {
-        let base = vertices.len() as u32;
-        vertices.extend_from_slice(&[
+        let base = data.vertices.len() as u32;
+        data.vertices.extend_from_slice(&[
             [x + 1.0, y, z + 1.0],
             [x + 1.0, y, z],
             [x + 1.0, y + 1.0, z],
             [x + 1.0, y + 1.0, z + 1.0],
         ]);
-        normals.extend_from_slice(&[[1.0, 0.0, 0.0]; 4]);
-        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        colors.extend_from_slice(&[[0.7; 4]; 4]);
+        data.normals.extend_from_slice(&[[1.0, 0.0, 0.0]; 4]);
+        data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        data.colors.extend_from_slice(&[[0.7; 4]; 4]);
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);
-        uvs.extend_from_slice(&uv_cords);
+        data.uvs.extend_from_slice(&uv_cords);
     }
 
     // LEFT (-X)
     if render_left {
-        let base = vertices.len() as u32;
-        vertices.extend_from_slice(&[
+        let base = data.vertices.len() as u32;
+        data.vertices.extend_from_slice(&[
             [x, y, z],
             [x, y, z + 1.0],
             [x, y + 1.0, z + 1.0],
             [x, y + 1.0, z],
         ]);
-        normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
-        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        colors.extend_from_slice(&[[0.7; 4]; 4]);
+        data.normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
+        data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        data.colors.extend_from_slice(&[[0.7; 4]; 4]);
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);
-        uvs.extend_from_slice(&uv_cords);
+        data.uvs.extend_from_slice(&uv_cords);
     }
 
     // FRONT (+Z)
     if render_front {
-        let base = vertices.len() as u32;
-        vertices.extend_from_slice(&[
+        let base = data.vertices.len() as u32;
+        data.vertices.extend_from_slice(&[
             [x, y, z + 1.0],
             [x + 1.0, y, z + 1.0],
             [x + 1.0, y + 1.0, z + 1.0],
             [x, y + 1.0, z + 1.0],
         ]);
-        normals.extend_from_slice(&[[0.0, 0.0, 1.0]; 4]);
-        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        colors.extend_from_slice(&[[0.7; 4]; 4]);
+        data.normals.extend_from_slice(&[[0.0, 0.0, 1.0]; 4]);
+        data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        data.colors.extend_from_slice(&[[0.7; 4]; 4]);
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);
-        uvs.extend_from_slice(&uv_cords);
+        data.uvs.extend_from_slice(&uv_cords);
     }
 
     // BACK (-Z)
     if render_back {
-        let base = vertices.len() as u32;
-        vertices.extend_from_slice(&[
+        let base = data.vertices.len() as u32;
+        data.vertices.extend_from_slice(&[
             [x + 1.0, y, z],
             [x, y, z],
             [x, y + 1.0, z],
             [x + 1.0, y + 1.0, z],
         ]);
-        normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
-        indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        colors.extend_from_slice(&[[0.6; 4]; 4]); // Leicht dunkler für bessere Kontur
+        data.normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
+        data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+        data.colors.extend_from_slice(&[[0.6; 4]; 4]); // Leicht dunkler für bessere Kontur
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);
-        uvs.extend_from_slice(&uv_cords);
+        data.uvs.extend_from_slice(&uv_cords);
     }
 }

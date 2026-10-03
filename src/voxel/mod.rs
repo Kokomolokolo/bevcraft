@@ -37,7 +37,10 @@ pub struct ChunkData(pub HashMap<ChunkPos, Chunk>);
 
 // Wird vor allem geladen 
 #[derive(Resource)]
-pub struct ChunkMaterial(pub Handle<StandardMaterial>);
+pub struct ChunkMaterial{
+    pub transparent: Handle<StandardMaterial>,
+    pub opaque: Handle<StandardMaterial>
+}
 
 #[derive(SystemParam)]
 pub struct ChunkParams<'w, 's> {

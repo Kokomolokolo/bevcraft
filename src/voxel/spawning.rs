@@ -64,9 +64,9 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     let Ok(player_transform) = player_q.single() else { return; };
 
     let player_chunk = IVec3::new(
-        (player_transform.translation.x / CHUNK_SIZE as f32) as i32, 
+        (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32, 
         0, 
-        (player_transform.translation.z / CHUNK_SIZE as f32) as i32
+        (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
     );
     
     // Die Data wird mit einer höheren Distanze gerendert, damit inter chunk culling auch außen funktioniert
@@ -120,26 +120,44 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
         return;
     }
     
-    let mesh = build_chunk_mesh(&chunk, &pos, neighbor_data);
-    if mesh.count_vertices() == 0 {
+    let mesh_result = build_chunk_mesh(&chunk, &pos, neighbor_data);
+    
+    // Mit collider braucht das bauen eines meshes mehr als 3x so lang. Deswegen erstmal raus
+    // let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
+
+    let opaque_opt = mesh_result.opaque;
+    let transparent_opt = mesh_result.transparent;
+    
+    if opaque_opt.is_none() && transparent_opt.is_none() {
         spawner.chunk_map.0.insert(pos, None);
         return;
     }
-    // Mit collider braucht das bauen eines meshes mehr als 3x so lang. Deswegen erstmal raus
-    // let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
-    let handle = spawner.meshes.add(mesh);
-
-    // Chunk selbst spawnen
-    let entity = spawner.commands.spawn((
-        Mesh3d(handle),
-        MeshMaterial3d(spawner.material.0.clone()),
-        RigidBody::Static,
-        //collider,
+    
+    // Leerer Parent-Container an Chunk-Position
+    let parent_entity = spawner.commands.spawn((
         Transform::from_translation(pos.to_world()),
-        pos,
+        Visibility::default(),
     )).id();
-
-    spawner.chunk_map.0.insert(pos, Some(entity));
+    
+    if let Some(opaque_mesh) = opaque_opt {
+        let opaque_child = spawner.commands.spawn((
+            Mesh3d(spawner.meshes.add(opaque_mesh)),
+            MeshMaterial3d(spawner.material.opaque.clone()),
+            Transform::IDENTITY,
+        )).id();
+        spawner.commands.entity(parent_entity).add_child(opaque_child);
+    }
+    
+    if let Some(transparent_mesh) = transparent_opt {
+        let transparent_child = spawner.commands.spawn((
+            Mesh3d(spawner.meshes.add(transparent_mesh)),
+            MeshMaterial3d(spawner.material.transparent.clone()), // Transparentes Material!
+            Transform::IDENTITY,
+        )).id();
+        spawner.commands.entity(parent_entity).add_child(transparent_child);
+    }
+    
+    spawner.chunk_map.0.insert(pos, Some(parent_entity));
 }
 
 ///===============================

@@ -17,17 +17,25 @@ pub fn setup_block_material(
         println!("Changes");
     }
     
-    let handle = materials.add(StandardMaterial {
-            base_color_texture: Some(atlas),
-            perceptual_roughness: 0.7,
-            metallic: 0.0,
-            reflectance: 0.1,
-            // base_color: Color::srgb(0.5, 0.5, 0.5),
-            //cull_mode: None,
-            //unlit: true,
-            ..default()
-        });
-        commands.insert_resource(ChunkMaterial(handle));
+    let opaque_handle = materials.add(StandardMaterial {
+        base_color_texture: Some(atlas.clone()),
+        perceptual_roughness: 0.7,
+        metallic: 0.0,
+        reflectance: 0.1,
+        // base_color: Color::srgb(0.5, 0.5, 0.5),
+        //cull_mode: None,
+        //unlit: true,
+        ..default()
+    });
+    let transparent_handle = materials.add(StandardMaterial {
+        base_color_texture: Some(atlas),
+        alpha_mode: AlphaMode::Mask(0.5),
+        // base_color: Color::srgb(0.5, 0.5, 0.5),
+        //cull_mode: None,
+        //unlit: true,
+        ..default()
+    });
+    commands.insert_resource(ChunkMaterial {opaque: opaque_handle, transparent: transparent_handle});
     println!("Next State");
     next_state.set(AppState::InGame);
 }
