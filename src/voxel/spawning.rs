@@ -3,17 +3,17 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use avian3d::prelude::*;
 
-use crate::{player::Player, voxel::{ChunkData, ChunkMap, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
+use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
 
-const RENDER_DISTANCE: i32 = 20;
 const WORLD_HEIGHT: i32 = 5;
 
-pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Transform, With<Player>>) { // Also erstmal nur so spawne
+pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Transform, With<Player>>, settings: Res<GameSettings>) { // Also erstmal nur so spawne
     use std::time::Instant;
     let now = Instant::now();
 
+    let render_distance = settings.render_distance as i32;
+    
     // Spieler Position
     let Ok(player_transform) = player_q.single() else { return; };
 
@@ -27,8 +27,8 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     const MAX_CHUNKS_PER_FRAME: i32 = 20;
     let mut spawned_this_frame = 0;
     
-    for x in -RENDER_DISTANCE..=RENDER_DISTANCE {
-        for z in -RENDER_DISTANCE..=RENDER_DISTANCE {
+    for x in -render_distance..=render_distance {
+        for z in -render_distance..=render_distance {
 
             for y in 0..=WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
@@ -55,10 +55,17 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     }
 }
 
-pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, player_q: Query<&Transform, With<Player>>, generator: Res<WorldGenerator>) {
+pub fn generate_chunk_data_aroud_player(
+    mut chunk_data: ResMut<ChunkData>, 
+    player_q: Query<&Transform, With<Player>>, 
+    generator: Res<WorldGenerator>,
+    settings: Res<GameSettings>,
+) {
     // Debug Zeit messung
     use std::time::Instant;
     let now = Instant::now();
+
+    let render_distance = settings.render_distance as i32;
 
     // Spieler Position
     let Ok(player_transform) = player_q.single() else { return; };
@@ -70,9 +77,9 @@ pub fn generate_chunk_data_aroud_player(mut chunk_data: ResMut<ChunkData>, playe
     );
     
     // Die Data wird mit einer höheren Distanze gerendert, damit inter chunk culling auch außen funktioniert
-    const DATA_RENDER_DISTANCE: i32 = RENDER_DISTANCE + 2;
-    for x in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
-        for z in -DATA_RENDER_DISTANCE..=DATA_RENDER_DISTANCE {
+    let data_render_distance: i32 = render_distance + 2;
+    for x in -data_render_distance..=data_render_distance {
+        for z in -data_render_distance..=data_render_distance {
             for y in 0..=WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
                 generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
@@ -168,9 +175,12 @@ pub fn despawn_chunks(
     mut chunk_data: ResMut<ChunkData>, 
     mut chunk_map: ResMut<ChunkMap>, 
     mut commands: Commands, 
-    player_q: Query<&Transform, With<Player>>
+    player_q: Query<&Transform, With<Player>>,
+    settings: Res<GameSettings>,
 ) {
     let Ok(player_transform) = player_q.single() else { return; };
+
+    let render_distance = settings.render_distance as i32;
     
     let player_chunk = IVec3::new(
         (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32,
@@ -182,8 +192,8 @@ pub fn despawn_chunks(
     let mut to_remove: Vec<ChunkPos> = Vec::new();
     
     for (chunk_pos, entity) in chunk_map.0.iter() {
-        if (player_chunk.x - chunk_pos.0.x).abs() > RENDER_DISTANCE + 5 
-        || (player_chunk.z - chunk_pos.0.z).abs() > RENDER_DISTANCE + 5
+        if (player_chunk.x - chunk_pos.0.x).abs() > render_distance + 5 
+        || (player_chunk.z - chunk_pos.0.z).abs() > render_distance + 5
         {
             if let Some(entity) = entity { // Wenn wirklich ein entity da ist
                 // Kann sein das keins da ist wenn der chunk bspw. leer ist

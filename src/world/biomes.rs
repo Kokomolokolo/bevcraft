@@ -66,7 +66,7 @@ pub const OCEAN: Biome = Biome {
 pub const MOUTAINS: Biome = Biome {
     biome_type: Mountains,
     level: 0.8,
-    top_block: BlockType::Grass,
+    top_block: BlockType::Stone,
     base_height: 55.,
     amplitude: 30.,
     feature_frequency: 0.07,

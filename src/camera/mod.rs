@@ -2,19 +2,20 @@ use bevy::prelude::*;
 use bevy::input::mouse::MouseMotion;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
+use crate::AppState;
 use crate::player::Player;
 
 pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup_camera);
+        app.add_systems(OnEnter(AppState::InGame), setup_camera);
         app.add_systems(Update, (
             camera_look, 
             camera_movement, 
             lock_cursor_on_click,
             unlock_cursor_esc
-        ));
+            ).run_if(in_state(AppState::InGame)));
     }
 }
 
@@ -35,13 +36,7 @@ impl Default for FpsCamera {
 
 pub fn setup_camera(
     mut commands: Commands,
-    // Nutzt "Single" statt "Query", da es nur ein PrimaryWindow gibt
-    mut cursor_options: Single<&mut CursorOptions, With<PrimaryWindow>>,
-) {
-    cursor_options.grab_mode = CursorGrabMode::Locked;
-    cursor_options.visible = false;
-
-    
+) { 
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 60.0, 0.0).looking_at(Vec3::X, Vec3::Y),

@@ -1,4 +1,4 @@
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, math::VectorSpace, prelude::*};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use avian3d::prelude::*;
 
 mod voxel;
@@ -7,6 +7,8 @@ mod assets;
 mod camera;
 mod world;
 mod gui;
+mod menu;
+mod settings;
 
 use voxel::VoxxelPlugin;
 use player::PlayerPlugin;
@@ -14,12 +16,15 @@ use assets::LoaderPlugin;
 use camera::CameraPlugin;
 use world::WorldPlugin;
 use gui::GUIPlugin;
+use menu::MenuPlugin;
+use settings::SettingsPlugin;
 
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum AppState {
     #[default]
     Loading,
-    //Menu,
+    Menu,
+    Settings,
     InGame,
 }
 
@@ -30,9 +35,9 @@ fn main() {
         .init_state::<AppState>()
         .add_systems(Startup, setup)
         .add_plugins(CameraPlugin)
-        .add_plugins((LoaderPlugin, VoxxelPlugin, WorldPlugin, PlayerPlugin, GUIPlugin))
+        .add_plugins((LoaderPlugin, MenuPlugin, SettingsPlugin, VoxxelPlugin, WorldPlugin, PlayerPlugin, GUIPlugin))
         .add_plugins(PhysicsPlugins::default())
-        //.add_plugins(PhysicsDebugPlugin::default())
+        .add_plugins(PhysicsDebugPlugin::default())
         .run();
 }
 
@@ -41,11 +46,12 @@ fn setup(
 ) {
     commands.spawn((
         DirectionalLight::default(),
-        AmbientLight::default(),
         Transform::from_xyz(100.0, 100.0, 100.0).looking_at(Vec3::ZERO, Vec3::Y)
     ));
     commands.insert_resource(ClearColor(Color::srgb(0.5, 0.6, 0.99)));
 }
+
+
 
 // TODO
 // Weltgeneration

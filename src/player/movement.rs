@@ -2,7 +2,7 @@ use bevy::{input::mouse::MouseMotion, math::VectorSpace, prelude::*};
 use avian3d::prelude::*;
 use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
-use crate::player::{Player, movement};
+use crate::{AppState::{self, Settings}, player::{Player, movement}};
 
 pub fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -18,6 +18,7 @@ pub fn player_movement(
         if keyboard.pressed(KeyCode::KeyS) {dir -= *forward}
         if keyboard.pressed(KeyCode::KeyA) {dir -= *right}
         if keyboard.pressed(KeyCode::KeyD) {dir += *right}
+
 
         if dir != Vec3::ZERO{
             dir = dir.normalize();
