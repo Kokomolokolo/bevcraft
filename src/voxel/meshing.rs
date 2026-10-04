@@ -72,8 +72,8 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
                 let render_front = should_render_face(block, buffer[pad_idx(px, py, pz + 1)]);
 
                 // Auf welches Mesh soll hinzugefügt werden?
-                let target_data = &mut opaque_data;
-                
+                let target_data = //&mut opaque_data;
+                if block.is_transparent() { &mut transparent_data} else { &mut opaque_data };
                 add_faces(
                     pos,
                     block,

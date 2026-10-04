@@ -28,9 +28,9 @@ pub fn setup_block_material(
         ..default()
     });
     let transparent_handle = materials.add(StandardMaterial {
-        base_color_texture: Some(atlas),
-        alpha_mode: AlphaMode::Mask(0.5),
-        // base_color: Color::srgb(0.5, 0.5, 0.5),
+        //base_color_texture: Some(atlas),
+        base_color: Color::srgba(0.1, 0.1, 0.8, 0.8),
+        alpha_mode: AlphaMode::Blend,
         //cull_mode: None,
         //unlit: true,
         ..default()
