@@ -19,12 +19,14 @@ pub fn get_atlas_cords(block_type: BlockType, face: &str) -> (usize, usize) {
 pub fn calculate_uvs(atlas_x: usize, atlas_y: usize) -> [[f32; 2]; 4] {
     let atlas_size: f32 = 16.0;
     let uv_step = 1.0 / atlas_size;
+    
+    let padding = 0.5 / 256.0; // Die Atlas Pixel size
 
-    let min_u = atlas_x as f32 * uv_step;
-    let max_u = (atlas_x + 1) as f32 * uv_step;
+    let min_u = atlas_x as f32 * uv_step + padding;
+    let max_u = (atlas_x + 1) as f32 * uv_step - padding;
 
-    let min_v = atlas_y as f32 * uv_step;
-    let max_v = (atlas_y + 1) as f32 * uv_step;
+    let min_v = atlas_y as f32 * uv_step + padding;
+    let max_v = (atlas_y + 1) as f32 * uv_step - padding;
 
     [ // Komentare sind falsch das ist mir alles suspekt
         [min_u, max_v], // 0: 
