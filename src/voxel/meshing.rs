@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::{asset::RenderAssetUsages, prelude::*};
 
 use crate::voxel::{
-    block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, texture::{calculate_uvs, get_atlas_cords},
+    block::BlockType::{self, Water}, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, texture::{calculate_uvs, get_atlas_cords},
 };
 /// ==================================================================
 /// Baut das komplette Mesh für einen Chunk
@@ -185,14 +185,16 @@ fn add_faces(
     let y = pos.y;
     let z = pos.z;
 
+    let height = if block_type == Water { 0.8 } else { 1.0 };
+
     // TOP (+Y)
     if render_top {
         let base = data.vertices.len() as u32;
         data.vertices.extend_from_slice(&[
-            [x, y + 1.0, z + 1.0],
-            [x + 1.0, y + 1.0, z + 1.0],
-            [x + 1.0, y + 1.0, z],
-            [x, y + 1.0, z],
+            [x, y + height, z + 1.0],
+            [x + 1.0, y + height, z + 1.0],
+            [x + 1.0, y + height, z],
+            [x, y + height, z],
         ]);
         data.normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
         data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
@@ -227,8 +229,8 @@ fn add_faces(
         data.vertices.extend_from_slice(&[
             [x + 1.0, y, z + 1.0],
             [x + 1.0, y, z],
-            [x + 1.0, y + 1.0, z],
-            [x + 1.0, y + 1.0, z + 1.0],
+            [x + 1.0, y + height, z],
+            [x + 1.0, y + height, z + 1.0],
         ]);
         data.normals.extend_from_slice(&[[1.0, 0.0, 0.0]; 4]);
         data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
@@ -245,8 +247,8 @@ fn add_faces(
         data.vertices.extend_from_slice(&[
             [x, y, z],
             [x, y, z + 1.0],
-            [x, y + 1.0, z + 1.0],
-            [x, y + 1.0, z],
+            [x, y + height, z + 1.0],
+            [x, y + height, z],
         ]);
         data.normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
         data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
@@ -263,8 +265,8 @@ fn add_faces(
         data.vertices.extend_from_slice(&[
             [x, y, z + 1.0],
             [x + 1.0, y, z + 1.0],
-            [x + 1.0, y + 1.0, z + 1.0],
-            [x, y + 1.0, z + 1.0],
+            [x + 1.0, y + height, z + 1.0],
+            [x, y + height, z + 1.0],
         ]);
         data.normals.extend_from_slice(&[[0.0, 0.0, 1.0]; 4]);
         data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
@@ -281,8 +283,8 @@ fn add_faces(
         data.vertices.extend_from_slice(&[
             [x + 1.0, y, z],
             [x, y, z],
-            [x, y + 1.0, z],
-            [x + 1.0, y + 1.0, z],
+            [x, y + height, z],
+            [x + 1.0, y + height, z],
         ]);
         data.normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
         data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);

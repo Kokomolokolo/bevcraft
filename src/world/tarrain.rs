@@ -19,12 +19,7 @@ impl WorldGenerator {
                 let biom_noise = self.biom_noise.get([world_x as f64 * 0.001, world_z as f64 * 0.001]);
                 let (primary_biom, secondary_biom, t) = get_biomes(biom_noise as f32);
 
-                let blended_base_height = lerp(primary_biom.base_height, secondary_biom.base_height, t);
-                let blended_amplitude = lerp(primary_biom.amplitude, secondary_biom.amplitude, t);
-
-                //let climate = self.get_climate(x as f32, z as f32);
-                let base_noise = self.tarrain_noise.get([world_x as f64 * 0.01, world_z as f64 * 0.01]) as f32;
-                let height = (blended_base_height + base_noise * blended_amplitude) as i32;
+                let height = self.get_height(world_x, world_z, &primary_biom, &secondary_biom, t);
                 
                 for y in 0..CHUNK_SIZE {
                     let world_y = (chunk_offset.y + y as f32) as i32;
@@ -36,15 +31,24 @@ impl WorldGenerator {
                             chunk.set(x, y, z, primary_biom.top_block);
                         } 
                         else if world_y > height - 5 {
-                            chunk.set(x, y, z, BlockType::Stone);
+                            chunk.set(x, y, z, BlockType::Dirt);
                         }
                         else {
-                            chunk.set(x, y, z, BlockType::Dirt);
+                            chunk.set(x, y, z, BlockType::Stone);
                         }
                     }
                 }
             }
         }
+    }
+    pub fn get_height(&self, world_x: f32, world_z: f32, p1: &Biome, p2: &Biome, t: f32) -> i32 {
+        let blended_base_height = lerp(p1.base_height, p2.base_height, t);
+        let blended_amplitude = lerp(p1.amplitude, p1.amplitude, t);
+
+        //let climate = self.get_climate(x as f32, z as f32);
+        let base_noise = self.tarrain_noise.get([world_x as f64 * 0.02, world_z as f64 * 0.02]) as f32;
+        let height = (blended_base_height + base_noise * blended_amplitude) as i32;
+        height
     }
 }
 

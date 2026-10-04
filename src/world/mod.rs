@@ -10,6 +10,7 @@ use crate::{voxel::block::BlockType, world::biomes::BiomeRegistry};
 
 mod tarrain;
 mod biomes;
+mod structures;
 
 pub struct WorldPlugin;
 

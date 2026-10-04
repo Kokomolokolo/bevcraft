@@ -2,7 +2,7 @@ use std::{collections::HashMap};
 
 use bevy::prelude::*;
 
-use crate::{voxel::{ChunkData, chunk::Chunk, components::ChunkPos}, world::WorldGenerator};
+use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::WorldGenerator};
 
 impl ChunkData {
     pub fn generate_chunk_tarrain_data(&mut self, pos: IVec3, generator: &Res<WorldGenerator>) {
@@ -20,6 +20,38 @@ impl ChunkData {
         
         // Daten werden gepeichert
         self.0.insert(pos, chunk);
+    }
+
+    pub fn set_world_block(&mut self, x: i32, y: i32, z: i32, block: BlockType) {
+        let chunk_pos = ChunkPos(IVec3::new(
+            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+        ));
+
+        if let Some(chunk) = self.0.get_mut(&chunk_pos) {
+            let local_x = x.rem_euclid(CHUNK_SIZE as i32) as usize;
+            let local_y = y.rem_euclid(CHUNK_SIZE as i32) as usize;
+            let local_z = z.rem_euclid(CHUNK_SIZE as i32) as usize;
+
+            chunk.set(local_x, local_y, local_z, block);
+        }
+    }
+    pub fn get_world_block(&self, x: i32, y: i32, z: i32) -> Option<BlockType> {
+        let chunk_pos = ChunkPos(IVec3::new(
+            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+        ));
+
+        if let Some(chunk) = self.0.get(&chunk_pos) {
+            let local_x = x.rem_euclid(CHUNK_SIZE as i32) as usize;
+            let local_y = y.rem_euclid(CHUNK_SIZE as i32) as usize;
+            let local_z = z.rem_euclid(CHUNK_SIZE as i32) as usize;
+
+            return Some(chunk.get(local_x, local_y, local_z));
+        }
+        None
     }
 
     // Gibt den Chunk selbst sowie alle Nachbarn zurück. Chunk selbst hat eine ChunkPos von 0
