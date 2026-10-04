@@ -2,8 +2,26 @@ use std::{collections::HashMap};
 
 use bevy::prelude::*;
 
-use crate::voxel::{ChunkData, chunk::Chunk, components::ChunkPos};
+use crate::{voxel::{ChunkData, chunk::Chunk, components::ChunkPos}, world::WorldGenerator};
+
 impl ChunkData {
+    pub fn generate_chunk_tarrain_data(&mut self, pos: IVec3, generator: &Res<WorldGenerator>) {
+        let pos = ChunkPos(pos);
+        
+        if self.0.contains_key(&pos) {
+            return;
+        }
+    
+        // Chunk wird erstellt
+        let mut chunk = Chunk::new();
+    
+        // Chunk wird nach generationsregeln bearbeitet
+        generator.generate_chunk_tarrain(&mut chunk, pos);
+        
+        // Daten werden gepeichert
+        self.0.insert(pos, chunk);
+    }
+
     // Gibt den Chunk selbst sowie alle Nachbarn zurück. Chunk selbst hat eine ChunkPos von 0
     pub fn get_chunk_and_neighbors(&self, pos: ChunkPos) -> HashMap<ChunkPos, &Chunk> {
         let mut return_map = HashMap::new();

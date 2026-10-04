@@ -82,7 +82,7 @@ pub fn generate_chunk_data_aroud_player(
         for z in -data_render_distance..=data_render_distance {
             for y in 0..=WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
-                generate_chunk_data(chunk_pos, &mut chunk_data, &generator);
+                chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
             }
         }
     }
@@ -90,23 +90,6 @@ pub fn generate_chunk_data_aroud_player(
     if elapsed > Duration::from_millis(1) {
         //println!("Time to generate chunk data: {:.2?}", elapsed);
     }
-}
-
-fn generate_chunk_data(pos: IVec3, chunk_data: &mut ChunkData, generator: &Res<WorldGenerator>) {
-    let pos = ChunkPos(pos);
-    
-    if chunk_data.0.contains_key(&pos) {
-        return;
-    }
-
-    // Chunk wird erstellt
-    let mut chunk = Chunk::new();
-
-    // Chunk wird nach generationsregeln bearbeitet
-    generator.generate_chunk_tarrain(&mut chunk, pos);
-    
-    // Daten werden gepeichert
-    chunk_data.0.insert(pos, chunk);
 }
 
 pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {

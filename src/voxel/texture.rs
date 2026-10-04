@@ -22,7 +22,7 @@ pub fn calculate_uvs(atlas_x: usize, atlas_y: usize) -> [[f32; 2]; 4] {
     
     let padding = 0.5 / 256.0; // Die Atlas Pixel size
 
-    let min_u = atlas_x as f32 * uv_step + padding;
+    let min_u = atlas_x as f32 * uv_step + padding; // Hilft bei Pixel bleeding
     let max_u = (atlas_x + 1) as f32 * uv_step - padding;
 
     let min_v = atlas_y as f32 * uv_step + padding;
