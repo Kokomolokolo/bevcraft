@@ -55,7 +55,7 @@ pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
 pub fn get_biomes(value: f32) -> (Biome, Biome, f32) {
     let ocean_cutoff = -0.7;
     let dessert_cutoff = -0.3;
-    let plains_cutoff = 0.4;
+    let plains_cutoff = 0.0;
     let mountains_cutoff = 1.0;
     
     if value < ocean_cutoff {

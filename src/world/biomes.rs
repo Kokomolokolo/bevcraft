@@ -40,8 +40,8 @@ pub const PLAINS: Biome = Biome {
     biome_type: Plains,
     level: 0.0,
     top_block: BlockType::Grass,
-    base_height: 50.,
-    amplitude: 20.,
+    base_height: 70.,
+    amplitude: 50.,
     feature_frequency: 0.002,
 };
 
@@ -49,8 +49,8 @@ pub const DESERT: Biome = Biome {
     biome_type: Desert,
     level: -0.4,
     top_block: BlockType::Sand,
-    base_height: 50.,
-    amplitude: 15.,
+    base_height: 70.,
+    amplitude: 25.,
     feature_frequency: 0.002,
 };
 
@@ -68,7 +68,7 @@ pub const MOUTAINS: Biome = Biome {
     level: 0.8,
     top_block: BlockType::Stone,
     base_height: 55.,
-    amplitude: 30.,
+    amplitude: 40.,
     feature_frequency: 0.07,
 };
 

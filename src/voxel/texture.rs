@@ -17,7 +17,7 @@ pub fn get_atlas_cords(block_type: BlockType, face: &str) -> (usize, usize) {
 }
 
 pub fn calculate_uvs(atlas_x: usize, atlas_y: usize) -> [[f32; 2]; 4] {
-    const atlas_size: f32 = 16.0;
+    let atlas_size: f32 = 16.0;
     let uv_step = 1.0 / atlas_size;
 
     let min_u = atlas_x as f32 * uv_step;

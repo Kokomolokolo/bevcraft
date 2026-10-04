@@ -37,7 +37,7 @@ pub fn setup_block_material(
     });
     commands.insert_resource(ChunkMaterial {opaque: opaque_handle, transparent: transparent_handle});
     println!("Next State");
-    next_state.set(AppState::Menu);
+    next_state.set(AppState::InGame);
 }
 
 pub fn load_assets(

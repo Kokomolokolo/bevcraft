@@ -39,7 +39,7 @@ pub fn setup_camera(
 ) { 
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 60.0, 0.0).looking_at(Vec3::X, Vec3::Y),
+        Transform::from_xyz(0.0, 80.0, 0.0),
         FpsCamera::default(),
         Player
     ));
