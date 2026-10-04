@@ -31,11 +31,11 @@ impl WorldGenerator {
                     if world_y < SEA_LEVEL {
                         chunk.set(x, y, z, BlockType::Water);
                     }
-                    else if world_y <= height {
+                    if world_y <= height {
                         if world_y == height {
                             chunk.set(x, y, z, primary_biom.top_block);
                         } 
-                        else if height > 5 {
+                        else if world_y > height - 5 {
                             chunk.set(x, y, z, BlockType::Stone);
                         }
                         else {
