@@ -24,9 +24,9 @@ impl ChunkData {
 
     pub fn set_world_block(&mut self, x: i32, y: i32, z: i32, block: BlockType) {
         let chunk_pos = ChunkPos(IVec3::new(
-            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
-            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
-            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+            x.div_euclid(CHUNK_SIZE as i32),
+            y.div_euclid(CHUNK_SIZE as i32),
+            z.div_euclid(CHUNK_SIZE as i32),
         ));
 
         if let Some(chunk) = self.0.get_mut(&chunk_pos) {
@@ -39,9 +39,9 @@ impl ChunkData {
     }
     pub fn get_world_block(&self, x: i32, y: i32, z: i32) -> Option<BlockType> {
         let chunk_pos = ChunkPos(IVec3::new(
-            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
-            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
-            (x as f32 / CHUNK_SIZE as f32).floor() as i32,
+            x.div_euclid(CHUNK_SIZE as i32),
+            y.div_euclid(CHUNK_SIZE as i32),
+            z.div_euclid(CHUNK_SIZE as i32),
         ));
 
         if let Some(chunk) = self.0.get(&chunk_pos) {

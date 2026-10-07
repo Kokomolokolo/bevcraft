@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::ecs::system::SystemParam;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub mod block;
 pub mod chunk;
@@ -10,11 +10,13 @@ pub mod components;
 mod spawning;
 mod chunk_data;
 mod texture;
+mod dirty_chunks;
 
 use chunk::*;
 use meshing::*;
 use spawning::*;
 use components::*;
+use dirty_chunks::rebuild_dirty_chunks;
 
 use crate::AppState;
 
@@ -24,7 +26,9 @@ impl Plugin for VoxxelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkMap>();
         app.init_resource::<ChunkData>();
-        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, despawn_chunks).chain().run_if(in_state(AppState::InGame)));
+        app.init_resource::<DirtyChunks>();
+        app.add_systems(Update, rebuild_dirty_chunks);
+        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, despawn_chunks, drain_chunks).chain().run_if(in_state(AppState::InGame)));
     }
 }
 // Basically ein chunk manager
@@ -34,6 +38,9 @@ pub struct ChunkMap(pub HashMap<ChunkPos, Option<Entity>>); // Eine Option für 
 // Speichert alle Chunk daten 
 #[derive(Resource, Default)]
 pub struct ChunkData(pub HashMap<ChunkPos, Chunk>);
+
+#[derive(Resource, Default)]
+pub struct DirtyChunks(pub HashSet<ChunkPos>);
 
 // Wird vor allem geladen 
 #[derive(Resource)]

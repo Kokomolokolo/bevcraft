@@ -41,7 +41,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
                     continue;
                 }
                 
-                spawn_chunk(&mut spawner, chunk_pos);
+                spawn_chunk(&mut spawner, pos);
                 spawned_this_frame += 1;
     
                 if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
@@ -94,9 +94,8 @@ pub fn generate_chunk_data_aroud_player(
     }
 }
 
-pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
+pub fn spawn_chunk(spawner: &mut ChunkParams, pos: ChunkPos) {
     // Check ob an der Stelle bereits ein Chunk ist
-    let pos = ChunkPos(coord);
     if spawner.chunk_map.0.contains_key(&pos) {
         return;
     }
@@ -194,5 +193,17 @@ pub fn despawn_chunks(
     for pos in to_remove {
         chunk_map.0.remove(&pos);
         //chunk_data.0.remove(&pos);
+    }
+}
+
+// Alle meshes entfernen
+pub fn drain_chunks(keys: Res<ButtonInput<KeyCode>>, mut chunk_map: ResMut<ChunkMap>, mut commands: Commands) {
+    if keys.just_pressed(KeyCode::KeyP) {
+        for (pos, entity) in chunk_map.0.clone() {
+            if let Some(entity) = entity {
+                commands.entity(entity).despawn();
+            }
+            chunk_map.0.remove(&pos);
+        }
     }
 }
