@@ -31,13 +31,13 @@ pub fn setup_block_material(
         //base_color_texture: Some(atlas),
         base_color: Color::srgba(0.1, 0.1, 0.8, 0.8),
         alpha_mode: AlphaMode::Blend,
-        //cull_mode: None,
+        cull_mode: None,
         //unlit: true,
         ..default()
     });
     commands.insert_resource(ChunkMaterial {opaque: opaque_handle, transparent: transparent_handle});
     println!("Next State");
-    next_state.set(AppState::InGame);
+    next_state.set(AppState::Menu);
 }
 
 pub fn load_assets(

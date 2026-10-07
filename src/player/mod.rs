@@ -9,7 +9,7 @@ pub struct PlayerPlugin;
 mod movement;
 use movement::*;
 
-use crate::AppState;
+use crate::{AppState, settings::GameSettings, voxel::chunk::CHUNK_SIZE};
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -19,8 +19,11 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_player(
-    mut commands: Commands
+    mut commands: Commands,
+    settings: Res<GameSettings>
 ) {
+    let render_dist = (settings.render_distance * CHUNK_SIZE as i32) as f32; // Für Fog
+
     commands.spawn((
         Player,
         RigidBody::Dynamic,
@@ -40,6 +43,11 @@ fn spawn_player(
         parent.spawn((
             Camera3d::default(),
             //Transform::from_xyz(1.0, 1.0, 1.0),
+            DistanceFog {
+                color: Color::srgb(0.2, 0.2, 0.2),
+                falloff: FogFalloff::Linear { start: render_dist - 25., end: render_dist + 20. },
+                ..default()
+            }
         ));
     });
 }

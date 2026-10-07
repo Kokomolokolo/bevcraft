@@ -4,6 +4,8 @@ use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
 use crate::AppState;
 use crate::player::Player;
+use crate::settings::GameSettings;
+use crate::voxel::chunk::CHUNK_SIZE;
 
 pub struct CameraPlugin;
 
@@ -36,12 +38,19 @@ impl Default for FpsCamera {
 
 pub fn setup_camera(
     mut commands: Commands,
+    settings: Res<GameSettings>,
 ) { 
+    let start = (settings.render_distance * CHUNK_SIZE as i32) as f32;
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 80.0, 0.0),
         FpsCamera::default(),
-        Player
+        Player,
+        DistanceFog {
+            color: Color::srgb(0.2, 0.2, 0.2),
+            falloff: FogFalloff::Linear { start: start - 25., end: start + 20. },
+            ..default()
+        }
     ));
 }
 

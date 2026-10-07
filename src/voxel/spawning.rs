@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
+use avian3d::prelude::*;
+
 use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
 
 const WORLD_HEIGHT: i32 = 5;
@@ -111,9 +113,6 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     }
     
     let mesh_result = build_chunk_mesh(&chunk, &pos, neighbor_data);
-    
-    // Mit collider braucht das bauen eines meshes mehr als 3x so lang. Deswegen erstmal raus
-    // let collider = Collider::trimesh_from_mesh(&mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
 
     let opaque_opt = mesh_result.opaque;
     let transparent_opt = mesh_result.transparent;
@@ -130,9 +129,15 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, coord: IVec3) {
     )).id();
     
     if let Some(opaque_mesh) = opaque_opt {
+        // Mit collider braucht das bauen eines meshes mehr als 2-3x so lang. Deswegen erstmal raus
+        // Vielleicht eine Lösung wo nur die Chunks direkt um den Spieler einen Collider gebaut bekommen..?
+        // Oder Custom Collider / Physiks Engine schreiben aber darauf gar keine Lust erstmal
+        //let collider = Collider::trimesh_from_mesh(&opaque_mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
+        
         let opaque_child = spawner.commands.spawn((
             Mesh3d(spawner.meshes.add(opaque_mesh)),
             MeshMaterial3d(spawner.material.opaque.clone()),
+            //collider,
             Transform::IDENTITY,
         )).id();
         spawner.commands.entity(parent_entity).add_child(opaque_child);

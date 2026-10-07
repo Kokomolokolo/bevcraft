@@ -37,7 +37,7 @@ fn main() {
         .add_plugins(CameraPlugin)
         .add_plugins((LoaderPlugin, MenuPlugin, SettingsPlugin, VoxxelPlugin, WorldPlugin, PlayerPlugin, GUIPlugin))
         .add_plugins(PhysicsPlugins::default())
-        .add_plugins(PhysicsDebugPlugin::default())
+        //.add_plugins(PhysicsDebugPlugin::default())
         .run();
 }
 
@@ -61,7 +61,6 @@ fn setup(
 // Frustrum culling
 // Bessere Performance
 // Spieler Blöcke abbauen, Springen, Springen, FOV Changes
-// Fog, 
 // Main Menu
 // World Saving
 // Settings

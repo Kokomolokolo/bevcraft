@@ -1,6 +1,5 @@
 // Tarrain Via Noise
 
-use bevy::{ecs::system::ResMut};
 use noise::NoiseFn;
 
 use crate::{voxel::{block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator, biomes::{self, Biome, BiomeRegistry, DESERT, MOUTAINS, OCEAN, PLAINS}}};
@@ -43,7 +42,7 @@ impl WorldGenerator {
     }
     pub fn get_height(&self, world_x: f32, world_z: f32, p1: &Biome, p2: &Biome, t: f32) -> i32 {
         let blended_base_height = lerp(p1.base_height, p2.base_height, t);
-        let blended_amplitude = lerp(p1.amplitude, p1.amplitude, t);
+        let blended_amplitude = lerp(p1.amplitude, p2.amplitude, t);
 
         //let climate = self.get_climate(x as f32, z as f32);
         let base_noise = self.tarrain_noise.get([world_x as f64 * 0.02, world_z as f64 * 0.02]) as f32;
