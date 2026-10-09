@@ -46,11 +46,7 @@ pub fn setup_camera(
         Transform::from_xyz(0.0, 80.0, 0.0),
         FpsCamera::default(),
         Player,
-        DistanceFog {
-            color: Color::srgb(0.2, 0.2, 0.2),
-            falloff: FogFalloff::Linear { start: start - 25., end: start + 20. },
-            ..default()
-        }
+        
     ));
 }
 
