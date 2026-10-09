@@ -19,7 +19,6 @@ impl Plugin for WorldPlugin {
         let mut rng = rand::thread_rng();
         let seed = rng.gen_range(0..420);
         app.insert_resource(WorldGenerator::new(seed));
-        app.insert_resource(BiomeRegistry::new());
     }
 }
 #[derive(Resource)]
@@ -28,7 +27,7 @@ pub struct WorldGenerator {
     tarrain_noise: Perlin,
     detail_noise: Perlin,
     biom_noise: Perlin,
-    
+    registry: BiomeRegistry,
 }
 
 impl Default for WorldGenerator {
@@ -38,6 +37,7 @@ impl Default for WorldGenerator {
             tarrain_noise: Perlin::new(420),
             detail_noise: Perlin::new(420 * 420),
             biom_noise: Perlin::new(42),
+            registry: BiomeRegistry::new(),
         }
     }
 }
@@ -49,6 +49,7 @@ impl WorldGenerator {
             tarrain_noise: Perlin::new(seed),
             detail_noise: Perlin::new(seed + 1),
             biom_noise: Perlin::new(seed + 2),
+            registry: BiomeRegistry::new(),
         }
     }
     // pub fn get_climate(&self, x: f32, z: f32) -> (f32, f32) {

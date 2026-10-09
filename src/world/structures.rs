@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{voxel::{chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator, tarrain::get_biomes}};
+use crate::{voxel::{chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator}};
 
 impl WorldGenerator {
     pub fn spawn_structures(&self, chunk: &mut Chunk, pos: ChunkPos) {

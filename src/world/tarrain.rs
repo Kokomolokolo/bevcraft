@@ -1,8 +1,10 @@
 // Tarrain Via Noise
 
+use bevy::prelude::*;
+
 use noise::NoiseFn;
 
-use crate::{voxel::{block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator, biomes::{self, Biome, BiomeRegistry, DESERT, MOUTAINS, OCEAN, PLAINS}}};
+use crate::{voxel::{block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator, biomes::{Biome, BiomeRegistry}}};
 
 pub const SEA_LEVEL: i32 = 40;
 
@@ -15,10 +17,7 @@ impl WorldGenerator {
                 let world_x = chunk_offset.x + x as f32; // world y erst später berechnen. Erstmal nehme wir für die generierung den y wert nicht mit rein.
                 let world_z = chunk_offset.z + z as f32;
 
-                let biom_noise = self.biom_noise.get([world_x as f64 * 0.001, world_z as f64 * 0.001]);
-                let (primary_biom, secondary_biom, t) = get_biomes(biom_noise as f32);
-
-                let height = self.get_height(world_x, world_z, &primary_biom, &secondary_biom, t);
+                let (height, biom) = self.get_height_and_biom(world_x as i32, world_z as i32);
                 
                 for y in 0..CHUNK_SIZE {
                     let world_y = (chunk_offset.y + y as f32) as i32;
@@ -27,7 +26,7 @@ impl WorldGenerator {
                     }
                     if world_y <= height {
                         if world_y == height {
-                            chunk.set(x, y, z, primary_biom.top_block);
+                            chunk.set(x, y, z, biom.top_block);
                         } 
                         else if world_y > height - 5 {
                             chunk.set(x, y, z, BlockType::Dirt);
@@ -40,37 +39,24 @@ impl WorldGenerator {
             }
         }
     }
-    pub fn get_height(&self, world_x: f32, world_z: f32, p1: &Biome, p2: &Biome, t: f32) -> i32 {
-        let blended_base_height = lerp(p1.base_height, p2.base_height, t);
-        let blended_amplitude = lerp(p1.amplitude, p2.amplitude, t);
+    // HILFSFUNKTIONEN
+    pub fn get_height_and_biom(&self, world_x: i32, world_z: i32) -> (i32, &Biome) {
+        let biom_val = self.biom_noise.get([world_x as f64 * 0.005, world_z as f64 * 0.005]) as f32;
+        let base_noise = self.tarrain_noise.get([world_x as f64 * 0.01, world_z as f64 * 0.01]) as f32;
+        let detail_noise = self.tarrain_noise.get([world_x as f64 * 0.03, world_z as f64 * 0.03]) as f32;
 
-        //let climate = self.get_climate(x as f32, z as f32);
-        let base_noise = self.tarrain_noise.get([world_x as f64 * 0.02, world_z as f64 * 0.02]) as f32;
-        let height = (blended_base_height + base_noise * blended_amplitude) as i32;
-        height
+        let (b1, b2, t) = self.registry.sample(biom_val as f32);
+
+        let h1 = b1.calculate_height(base_noise, detail_noise);
+        let h2 = b2.calculate_height(base_noise, detail_noise);
+
+        let final_height = lerp(h1, h2, t);
+        let primary_biom = if t < 0.5 { b1 } else { b1 }; 
+
+        (final_height.round() as i32, primary_biom)
     }
 }
 
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
-}
-
-pub fn get_biomes(value: f32) -> (Biome, Biome, f32) {
-    let ocean_cutoff = -0.7;
-    let dessert_cutoff = -0.3;
-    let plains_cutoff = 0.0;
-    let mountains_cutoff = 1.0;
-    
-    if value < ocean_cutoff {
-        (OCEAN, OCEAN, 0.0)
-    } else if value < dessert_cutoff {
-        let t = ((value - ocean_cutoff) / (dessert_cutoff - ocean_cutoff)).clamp(0.0, 1.0);
-        (OCEAN, DESERT, t)
-    } else if value < plains_cutoff {
-        let t = ((value - dessert_cutoff) / (plains_cutoff - dessert_cutoff)).clamp(0.0, 1.0);
-        (DESERT, PLAINS, t)
-    } else {
-        let t = ((value - plains_cutoff) / (mountains_cutoff - plains_cutoff)).clamp(0.0, 1.0);
-        (PLAINS, MOUTAINS, t)
-    }
 }
