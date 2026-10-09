@@ -29,7 +29,7 @@ impl WorldGenerator {
                             chunk.set(x, y, z, biom.top_block);
                         } 
                         else if world_y > height - 5 {
-                            chunk.set(x, y, z, BlockType::Dirt);
+                            chunk.set(x, y, z, biom.filler_block);
                         }
                         else {
                             chunk.set(x, y, z, BlockType::Stone);

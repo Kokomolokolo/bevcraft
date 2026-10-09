@@ -14,6 +14,7 @@ pub struct Biome {
     pub name: BiomeType,
     pub target_noise: f32, // Wo liegt es im Biom Noise, von -1 bis 1
     pub top_block: BlockType,
+    pub filler_block: BlockType,
     pub base_height: f32,
     pub amplitude: f32, // Wie hoch sind Berge
     pub feature_frequency: f32, // Wie oft kommen berge
@@ -24,7 +25,7 @@ impl Biome {
     // Tarrainhöhe für das Biom
     pub fn calculate_height(&self, base_noise: f32, detail_noise: f32) -> f32 {
         let normal_height = base_noise;
-        let ridged_height = (1.0 - detail_noise.abs()).powf(1.5) * 2.0 - 0.5;
+        let ridged_height = (1.0 - detail_noise.abs()).powf(1.2) * 2.0 - 0.5;
 
         let blended_noise = lerp(normal_height, ridged_height, self.ridge_factor);
 
@@ -43,6 +44,7 @@ impl BiomeRegistry {
                 name: Plains,
                 target_noise: 0.0,
                 top_block: BlockType::Grass,
+                filler_block: BlockType::Dirt,
                 base_height: 50.,
                 amplitude: 20.,
                 feature_frequency: 0.002,
@@ -52,6 +54,7 @@ impl BiomeRegistry {
                 name: Ocean,
                 target_noise: -0.8,
                 top_block: BlockType::Sand,
+                filler_block: BlockType::Stone,
                 base_height: 15.,
                 amplitude: 5.,
                 feature_frequency: 0.002,
@@ -61,6 +64,7 @@ impl BiomeRegistry {
                 name: Desert,
                 target_noise: -0.3,
                 top_block: BlockType::Sand,
+                filler_block: BlockType::Sand,
                 base_height: 45.,
                 amplitude: 10.,
                 feature_frequency: 0.002,
@@ -70,6 +74,7 @@ impl BiomeRegistry {
                 name: Mountains,
                 target_noise: 0.6,
                 top_block: BlockType::Stone,
+                filler_block: BlockType::Stone,
                 base_height: 70.,
                 amplitude: 45.,
                 feature_frequency: 0.002,
@@ -78,7 +83,8 @@ impl BiomeRegistry {
             Biome {
                 name: SpikyMountains,
                 target_noise: 0.9,
-                top_block: BlockType::Stone,
+                top_block: BlockType::Stone, // Schnee?
+                filler_block: BlockType::Stone,
                 base_height: 85.,
                 amplitude: 55.,
                 feature_frequency: 0.002,

@@ -86,8 +86,8 @@ pub fn spawn_chunk(spawner: &mut ChunkParams, pos: ChunkPos) {
 
     // Chunk sowie die neighbors werden geholt
     let neighbor_data = spawner.chunk_data.get_chunk_and_neighbors(pos);
-    
-    let chunk = neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt
+
+    let chunk = neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt jaaaaaaaaaaa
     
     if chunk.is_empty() {
         // Leere Chunks brauchen kein Mesh

@@ -27,9 +27,8 @@ impl Plugin for VoxxelPlugin {
         app.init_resource::<ChunkMap>();
         app.init_resource::<ChunkData>();
         app.init_resource::<DirtyChunks>();
-        app.add_systems(Startup, spawn_spawn_chunks); // Das bleibt hier nicht!
-        app.add_systems(Update, rebuild_dirty_chunks);
-        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, despawn_chunks, drain_chunks).chain().run_if(in_state(AppState::InGame)));
+        app.add_systems(OnEnter(AppState::InGame), spawn_spawn_chunks); // Das bleibt hier nicht!
+        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, despawn_chunks, drain_chunks, rebuild_dirty_chunks).chain().run_if(in_state(AppState::InGame)));
     }
 }
 // Basically ein chunk manager
