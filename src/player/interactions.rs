@@ -19,7 +19,7 @@ pub fn player_mine_place_block(
         let ray_dir = camera_transform.forward();
 
         let max_dist = 7.;
-        let step_size = 0.05;
+        let step_size = 0.01;
 
         for i in 0..((max_dist / step_size) as i32) {
             let dist = i as f32 * step_size;
@@ -69,7 +69,7 @@ pub fn player_mine_place_block(
         let ray_dir = camera_transform.forward();
 
         let max_dist = 9.;
-        let step_size = 0.05;
+        let step_size = 0.01;
 
         let mut last_air_block: Option<IVec3> = None;
 

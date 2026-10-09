@@ -8,6 +8,7 @@ pub struct PlayerPlugin;
 
 mod movement;
 mod interactions;
+mod hotbar;
 
 use interactions::player_mine_place_block;
 

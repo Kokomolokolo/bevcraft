@@ -1,18 +1,14 @@
 // Wird sich um das spawnen der chunks gekümmert
 
-use std::time::Duration;
-
 use bevy::prelude::*;
 
 use avian3d::prelude::*;
 
 use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
 
-const WORLD_HEIGHT: i32 = 5;
+pub const WORLD_HEIGHT: i32 = 5;
 
 pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Transform, With<Player>>, settings: Res<GameSettings>) { // Also erstmal nur so spawne
-    use std::time::Instant;
-    let now = Instant::now();
 
     let render_distance = settings.render_distance as i32;
     
@@ -51,10 +47,6 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
             
         }
     }
-    let elapsed = now.elapsed();
-    if elapsed > Duration::from_millis(3) {
-        println!("Time to spawn chunks: {:.2?}", elapsed);
-    }
 }
 
 pub fn generate_chunk_data_aroud_player(
@@ -63,10 +55,6 @@ pub fn generate_chunk_data_aroud_player(
     generator: Res<WorldGenerator>,
     settings: Res<GameSettings>,
 ) {
-    // Debug Zeit messung
-    use std::time::Instant;
-    let now = Instant::now();
-
     let render_distance = settings.render_distance as i32;
 
     // Spieler Position
@@ -87,10 +75,6 @@ pub fn generate_chunk_data_aroud_player(
                 chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
             }
         }
-    }
-    let elapsed = now.elapsed();
-    if elapsed > Duration::from_millis(1) {
-        //println!("Time to generate chunk data: {:.2?}", elapsed);
     }
 }
 

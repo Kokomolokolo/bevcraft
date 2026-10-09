@@ -13,6 +13,7 @@ pub fn settings_scene() -> impl Scene {
             column_gap: px(5),
             row_gap: px(5),
         }
+        BackgroundColor(Color::srgb(0.2, 0.2, 0.2))
         MenuMarker
         Children[
             (

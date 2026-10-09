@@ -18,6 +18,7 @@ impl WorldGenerator {
             }
         }
     }
+    pub fn parse_scructure() {}
     fn should_spawn_tree(&self, world_x: f32, world_z: f32) -> bool {
         // Nur in Plains weiiß nicht wie ich das mache
         if world_x % 4. == 0. && world_z % 4. == 0. {
