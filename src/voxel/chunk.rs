@@ -4,6 +4,7 @@ use crate::voxel::block::BlockType;
 
 pub const CHUNK_SIZE: usize = 32;
 
+#[derive(Clone)]
 pub struct Chunk {
     blocks: Vec<BlockType> // Länge Chunksizepow3
 }

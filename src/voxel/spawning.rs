@@ -1,10 +1,12 @@
 // Wird sich um das spawnen der chunks gekümmert
 
-use bevy::prelude::*;
+use std::collections::HashMap;
+
+use bevy::{prelude::*, tasks::{AsyncComputeTaskPool, futures_lite::future}};
 
 use avian3d::prelude::*;
 
-use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::build_chunk_mesh}, world::WorldGenerator};
+use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, ComputeMeshTask, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::{ChunkMeshResult, build_chunk_mesh}}, world::WorldGenerator};
 
 pub const WORLD_HEIGHT: i32 = 5;
 
@@ -22,7 +24,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     );
 
     // Lazy chunk loading - TODO
-    const MAX_CHUNKS_PER_FRAME: i32 = 20;
+    const MAX_CHUNKS_PER_FRAME: i32 = 2000;
     let mut spawned_this_frame = 0;
     
     for x in -render_distance..=render_distance {
@@ -37,7 +39,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
                     continue;
                 }
                 
-                spawn_chunk(&mut spawner, pos);
+                spawn_chunk(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
                 spawned_this_frame += 1;
     
                 if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
@@ -78,64 +80,124 @@ pub fn generate_chunk_data_aroud_player(
     }
 }
 
-pub fn spawn_chunk(spawner: &mut ChunkParams, pos: ChunkPos) {
+// Spawner kann nicht so übergeben werden aufgrund von borrow checker Problemen
+pub fn spawn_chunk(
+    commands: &mut Commands,
+    chunk_map: &mut HashMap<ChunkPos, Option<Entity>>,
+    chunk_data: &ChunkData,
+    pos: ChunkPos
+) {
     // Check ob an der Stelle bereits ein Chunk ist
-    if spawner.chunk_map.0.contains_key(&pos) {
+    if chunk_map.contains_key(&pos) {
         return;
     }
 
     // Chunk sowie die neighbors werden geholt
-    let neighbor_data = spawner.chunk_data.get_chunk_and_neighbors(pos);
+    // Auch die Blöcke werden hier geholt
+    let neighbor_data = chunk_data.get_chunk_and_neighbors(pos);
 
-    let chunk = neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt jaaaaaaaaaaa
+    let chunk = *neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt jaaaaaaaaaaa
     
     if chunk.is_empty() {
         // Leere Chunks brauchen kein Mesh
-        spawner.chunk_map.0.insert(pos, None);
+        chunk_map.insert(pos, None);
         return;
     }
-    
-    let mesh_result = build_chunk_mesh(&chunk, &pos, neighbor_data);
 
-    let opaque_opt = mesh_result.opaque;
-    let transparent_opt = mesh_result.transparent;
+    // Asyncrones meshing
+    // Alles Kopieren für den neuen Thread
+    let chunk_pos = pos; // Als eigener Wert wegen borrow checkers
+    let owned_chunks: HashMap<ChunkPos, Chunk> = neighbor_data
+        .into_iter()
+        .map(|(chunk_pos, chunk)| (chunk_pos, chunk.clone()))
+        .collect();
+
+    // Task starten
+    let thread_pool = AsyncComputeTaskPool::get();
+
+    // Die task mit async move starten
+    let task = thread_pool.spawn(async move {
+        // Das läuft im Hintergrund
+        let neighbors: HashMap<ChunkPos, &Chunk> = owned_chunks
+            .iter()
+            .map(|(pos, chunk)| (*pos, chunk))
+            .collect();
     
-    if opaque_opt.is_none() && transparent_opt.is_none() {
-        spawner.chunk_map.0.insert(pos, None);
-        return;
-    }
+        let chunk = owned_chunks
+            .get(&chunk_pos)
+            .expect("Chunk fehlt in owned_chunks");
+        
+        let mesh_result = build_chunk_mesh(chunk, &chunk_pos, &neighbors);
+
+        let collider = mesh_result.opaque.as_ref().and_then(|m| {
+            None
+            //Collider::trimesh_from_mesh(m)
+        });
+
+        ChunkMeshResult {
+            pos: chunk_pos,
+            opaque: mesh_result.opaque,
+            transparent: mesh_result.transparent,
+            collider: collider
+        }
+    });
     
     // Leerer Parent-Container an Chunk-Position
-    let parent_entity = spawner.commands.spawn((
+    let parent_entity = commands.spawn((
         Transform::from_translation(pos.to_world()),
         Visibility::default(),
+        ComputeMeshTask(task) // Mit der Compute Task
     )).id();
     
-    if let Some(opaque_mesh) = opaque_opt {
-        // Mit collider braucht das bauen eines meshes mehr als 2-3x so lang. Deswegen erstmal raus
-        // Vielleicht eine Lösung wo nur die Chunks direkt um den Spieler einen Collider gebaut bekommen..?
-        // Oder Custom Collider / Physiks Engine schreiben aber darauf gar keine Lust erstmal
-        //let collider = Collider::trimesh_from_mesh(&opaque_mesh).expect("Chunk Mesh konnte nicht gebaut werden!");
-        
-        let opaque_child = spawner.commands.spawn((
-            Mesh3d(spawner.meshes.add(opaque_mesh)),
-            MeshMaterial3d(spawner.material.opaque.clone()),
-            //collider,
-            Transform::IDENTITY,
-        )).id();
-        spawner.commands.entity(parent_entity).add_child(opaque_child);
+    chunk_map.insert(pos, Some(parent_entity));
+}
+
+pub fn handle_spawn_task(
+    mut spawner: ChunkParams,
+    mut tasks: Query<(Entity, &mut ComputeMeshTask)>
+) {
+    for (entity, mut task) in tasks {
+        // Prüfen ob die Task fertig ist
+        if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
+            // Fertig
+            // Die beiden Meshes überprüfen und spawnen
+            if result.opaque.is_none() && result.transparent.is_none() {
+                // Wenn beide meshes leer sind kann das parent entity despawnt werden und die chunk map leer
+                spawner.commands.entity(entity).despawn();
+                spawner.chunk_map.0.insert(result.pos, None);
+                continue;
+            }
+
+            // Sonst die beiden meshes spawnen
+            if let Some(opaque) = result.opaque {
+                let mut mesh = spawner.commands.spawn((
+                    Mesh3d(spawner.meshes.add(opaque)),
+                    MeshMaterial3d(spawner.material.opaque.clone()),
+                    Transform::IDENTITY,
+                ));
+
+                // Der Collider, falls vorhanden
+                if let Some(collider) = result.collider {
+                    mesh.insert(collider);
+                }
+
+                let child_id = mesh.id();
+                spawner.commands.entity(entity).add_child(child_id);
+            }
+
+            // Transparent
+            if let Some(transparent) = result.transparent {
+                let transparent_entity = spawner.commands.spawn((
+                    Mesh3d(spawner.meshes.add(transparent)),
+                    MeshMaterial3d(spawner.material.transparent.clone()),
+                    Transform::IDENTITY,
+                )).id();
+                spawner.commands.entity(entity).add_child(transparent_entity);
+            }
+            // Die Task aus dem Entity entfernen
+            spawner.commands.entity(entity).remove::<ComputeMeshTask>();
+        }
     }
-    
-    if let Some(transparent_mesh) = transparent_opt {
-        let transparent_child = spawner.commands.spawn((
-            Mesh3d(spawner.meshes.add(transparent_mesh)),
-            MeshMaterial3d(spawner.material.transparent.clone()), // Transparentes Material!
-            Transform::IDENTITY,
-        )).id();
-        spawner.commands.entity(parent_entity).add_child(transparent_child);
-    }
-    
-    spawner.chunk_map.0.insert(pos, Some(parent_entity));
 }
 
 ///===============================

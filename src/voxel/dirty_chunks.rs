@@ -21,7 +21,7 @@ pub fn rebuild_dirty_chunks(
         }
 
         // Neues entity
-        spawn_chunk(&mut spawner, pos);
+        spawn_chunk(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
     }
 }
 

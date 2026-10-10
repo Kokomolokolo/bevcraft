@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use avian3d::collision::collider::Collider;
 use bevy::{asset::RenderAssetUsages, prelude::*};
 
 use crate::voxel::{
@@ -15,6 +16,14 @@ pub struct ChunkMeshData {
     pub uvs: Vec<[f32; 2]>,
     pub indices: Vec<u32>,
     pub colors: Vec<[f32; 4]>,
+}
+
+pub struct ChunkMeshResult {
+    pub pos: ChunkPos,
+    pub opaque: Option<Mesh>,
+    pub transparent: Option<Mesh>,
+    pub collider: Option<Collider>
+    // vielleicht collider?
 }
 
 impl ChunkMeshData {
@@ -35,12 +44,7 @@ impl ChunkMeshData {
     }
 }
 
-pub struct ChunkMeshResult {
-    pub opaque: Option<Mesh>,
-    pub transparent: Option<Mesh>,
-}
-
-pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: HashMap<ChunkPos, &Chunk>) -> ChunkMeshResult {
+pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &HashMap<ChunkPos, &Chunk>) -> ChunkMeshResult {
     // Buffer statt die Hashmap, spaart cup zeit
     let buffer = create_padded_buffer(chunk, chunk_pos, &chunk_neighbor);
 
@@ -89,8 +93,11 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: Has
         }
     }
     ChunkMeshResult { 
+        pos: *chunk_pos,
         opaque: if opaque_data.is_empty() { None } else {Some(opaque_data.build())}, 
-        transparent: if transparent_data.is_empty() { None } else { Some(transparent_data.build()) } }
+        transparent: if transparent_data.is_empty() { None } else { Some(transparent_data.build()) },
+        collider: None, // Wird in spawning.rs geregelt
+    }
 }
 /// ==================================================================
 /// HILFSFUNKTIONEN
