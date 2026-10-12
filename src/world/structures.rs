@@ -66,14 +66,50 @@ impl WorldGenerator {
 impl Structure {
     pub fn oak_tree() -> Self {
         let mut blocks = Vec::new();
-
-        for y in 0..5 {
-            blocks.push(StructureBlock {
-                o_x: 0,
-                o_y: y,
-                o_z: 0,
-                block: BlockType::OakLog
-            });
+        
+        for y in 0..=7 {
+            for x in -2..=2 {
+                for z in -2..=2 {
+                    if y == 7 {
+                        if x == 0 && y == 0 {
+                            blocks.push(StructureBlock {
+                                o_x: x,
+                                o_y: y,
+                                o_z: z,
+                                block: BlockType::OakLeave
+                            });
+                        }
+                    }
+                    if y == 5 || y == 6 {
+                        if (x as i32).abs() < 2 && (z as i32).abs() < 2 {
+                            blocks.push(StructureBlock {
+                                o_x: x,
+                                o_y: y,
+                                o_z: z,
+                                block: BlockType::OakLeave
+                            });
+                        }
+                    }
+                    if y == 3 || y == 4 {
+                        blocks.push(StructureBlock {
+                            o_x: x,
+                            o_y: y,
+                            o_z: z,
+                            block: BlockType::OakLeave
+                        });
+                    }
+                }
+                
+            }
+            if y < 7 {
+                blocks.push(StructureBlock {
+                    o_x: 0,
+                    o_y: y,
+                    o_z: 0,
+                    block: BlockType::OakLog
+                });
+            }
+            
         }
         Self { blocks }
     }

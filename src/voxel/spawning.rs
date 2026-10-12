@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use bevy::{prelude::*, tasks::{AsyncComputeTaskPool, futures_lite::future}};
+use bevy::{light::NotShadowCaster, prelude::*, tasks::{AsyncComputeTaskPool, futures_lite::future}};
 
 use avian3d::prelude::*;
 
@@ -70,15 +70,19 @@ pub fn generate_chunk_data_aroud_player(
     // ======================
     // Phase 1 - Tarrain
     // ======================
-    
+    const MAX_TARRIN_CHUNKS: usize = 3;
+    const MAX_STRUKTURE_CHUNKS: usize = 3;
     // Die Data wird mit einer höheren Distanze gerendert, damit inter chunk culling auch außen funktioniert
     let data_render_distance: i32 = render_distance + 2;
-    for x in -data_render_distance..=data_render_distance {
-        for z in -data_render_distance..=data_render_distance {
-            for y in 0..=WORLD_HEIGHT {
-                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
-                // Stellt die Chunk State auf Tarrain
-                chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
+    for _ in 0..MAX_TARRIN_CHUNKS {
+        
+        for x in -data_render_distance..=data_render_distance {
+            for z in -data_render_distance..=data_render_distance {
+                for y in 0..=WORLD_HEIGHT {
+                    let chunk_pos = IVec3::new(x, y, z) + player_chunk;
+                    // Stellt die Chunk State auf Tarrain
+                    chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
+                }
             }
         }
     }
@@ -88,25 +92,28 @@ pub fn generate_chunk_data_aroud_player(
     // ======================
     let structure_render_distance = data_render_distance - 1;
 
-    for x in -structure_render_distance..=structure_render_distance {
-        for z in -structure_render_distance..=structure_render_distance {
-            for y in 0..=WORLD_HEIGHT {
-                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
-                let pos = ChunkPos(chunk_pos);
-
-                // Prüfen ob chunk bereits tarrin hat oder gff schon fertig ist
-                let needs_structures = if let Some(chunk) = chunk_data.0.get(&pos) {
-                    chunk.state == GenState::Tarrain
-                } else {
-                    false
-                };
-
-                if needs_structures {
-                    // Strukturen generieren
-                    generator.spawn_structures(pos, &mut chunk_data);
-
-                    if let Some(chunk) = chunk_data.0.get_mut(&pos) {
-                        chunk.state = GenState::Structures;
+    for _ in 0..MAX_STRUKTURE_CHUNKS {
+        
+        for x in -structure_render_distance..=structure_render_distance {
+            for z in -structure_render_distance..=structure_render_distance {
+                for y in 0..=WORLD_HEIGHT {
+                    let chunk_pos = IVec3::new(x, y, z) + player_chunk;
+                    let pos = ChunkPos(chunk_pos);
+    
+                    // Prüfen ob chunk bereits tarrin hat oder gff schon fertig ist
+                    let needs_structures = if let Some(chunk) = chunk_data.0.get(&pos) {
+                        chunk.state == GenState::Tarrain
+                    } else {
+                        false
+                    };
+    
+                    if needs_structures {
+                        // Strukturen generieren
+                        generator.spawn_structures(pos, &mut chunk_data);
+    
+                        if let Some(chunk) = chunk_data.0.get_mut(&pos) {
+                            chunk.state = GenState::Structures;
+                        }
                     }
                 }
             }
@@ -226,6 +233,7 @@ pub fn handle_spawn_task(
                     Mesh3d(spawner.meshes.add(transparent)),
                     MeshMaterial3d(spawner.material.transparent.clone()),
                     Transform::IDENTITY,
+                    NotShadowCaster, // Bis ich das besser löse erstmal keine Schatten davon
                 )).id();
                 spawner.commands.entity(entity).add_child(transparent_entity);
             }

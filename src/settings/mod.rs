@@ -21,7 +21,7 @@ impl Default for GameSettings {
         #[cfg(target_arch = "wasm32")]
         let render = 10;
         #[cfg(not(target_arch = "wasm32"))]
-        let render = 30;
+        let render = 10;
 
         Self {
             render_distance: render

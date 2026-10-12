@@ -32,7 +32,7 @@ pub fn setup_block_material(
         base_color: Color::srgba(0.1, 0.1, 0.8, 0.8),
         alpha_mode: AlphaMode::Blend,
         cull_mode: None,
-        //unlit: true,
+        unlit: true,
         ..default()
     });
     commands.insert_resource(ChunkMaterial {opaque: opaque_handle, transparent: transparent_handle});

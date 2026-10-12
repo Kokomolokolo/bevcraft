@@ -1,5 +1,6 @@
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use avian3d::prelude::*;
+use bevy::light::CascadeShadowConfigBuilder;
 
 mod voxel;
 mod player;
@@ -44,9 +45,20 @@ fn main() {
 fn setup(
     mut commands: Commands, 
 ) {
-    commands.spawn((
-        DirectionalLight::default(),
-        Transform::from_xyz(100.0, 100.0, 100.0).looking_at(Vec3::ZERO, Vec3::Y)
+    commands.spawn((DirectionalLight {
+            illuminance: 10000.0, // Helligkeit der Sonne
+            shadow_maps_enabled: true,
+            ..default()
+        },
+        CascadeShadowConfigBuilder {
+            maximum_distance: 500.0, // Set max shadow distance
+            first_cascade_far_bound: 4.0, // Set first cascade boundary
+            num_cascades: 4,
+            minimum_distance: 0.1,
+            ..default()
+        }.build(),
+        Transform::from_xyz(40.0, 80.0, 40.0)
+            .looking_at(Vec3::ZERO, Vec3::Y)
     ));
     commands.insert_resource(ClearColor(Color::srgb(0.5, 0.6, 0.99)));
 }

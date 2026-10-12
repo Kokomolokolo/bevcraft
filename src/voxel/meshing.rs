@@ -295,7 +295,7 @@ fn add_faces(
         ]);
         data.normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
         data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-        data.colors.extend_from_slice(&[[0.6; 4]; 4]); // Leicht dunkler für bessere Kontur
+        data.colors.extend_from_slice(&[[0.7; 4]; 4]); // Leicht dunkler für bessere Kontur
         // texturing
         let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
         let uv_cords = calculate_uvs(atlas_x, atlas_y);

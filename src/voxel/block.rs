@@ -10,7 +10,7 @@ pub enum BlockType {
     Water,
     Sand,
     OakLog,
-    OakLeaves,
+    OakLeave,
 }
 
 impl BlockType {
