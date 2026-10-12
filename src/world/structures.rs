@@ -1,9 +1,21 @@
 use bevy::prelude::*;
 
-use crate::{voxel::{chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator}};
+use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::{WorldGenerator, biomes::{Biome, BiomeType}, tarrain::SEA_LEVEL}};
+
+pub struct StructureBlock {
+    pub o_x: i32,
+    pub o_y: i32,
+    pub o_z: i32,
+    pub block: BlockType,
+}
+
+pub struct Structure {
+    pub blocks: Vec<StructureBlock>
+}
+
 
 impl WorldGenerator {
-    pub fn spawn_structures(&self, chunk: &mut Chunk, pos: ChunkPos) {
+    pub fn spawn_structures(&self, pos: ChunkPos, chunk_data: &mut ChunkData) {
         let chunk_offset = pos.to_world();
 
         for x in 0..CHUNK_SIZE {
@@ -11,19 +23,70 @@ impl WorldGenerator {
                 let world_x = chunk_offset.x + x as f32;
                 let world_z = chunk_offset.z + z as f32;
 
-                if self.should_spawn_tree(world_x, world_z) {
-                    // let surface_y = self.get_height(world_x, world_z)
+                let (surface, biom) = self.get_height_and_biom(world_x as i32, world_z as i32);
+
+                if biom.name != BiomeType::Plains || surface < SEA_LEVEL {
+                    continue;
+                }
+
+                let chance = hash2d(world_x as i32, world_z as i32, 2091);
+
+                if chance < 0.02 {
+                    // Baum spawnen
+                    let tree = Structure::oak_tree();
+                    self.place_structure(world_x as i32, surface, world_z as i32, chunk_offset, &tree, chunk_data);
                 }
                 
             }
         }
     }
-    pub fn parse_scructure() {}
-    fn should_spawn_tree(&self, world_x: f32, world_z: f32) -> bool {
-        // Nur in Plains weiiß nicht wie ich das mache
-        if world_x % 4. == 0. && world_z % 4. == 0. {
-            return true;
+    fn should_spawn_tree() {}
+    fn place_structure(
+        &self,
+        world_origin_x: i32,
+        world_origin_y: i32,
+        world_origin_z: i32,
+        chunk_offset: Vec3,
+        structure: &Structure,
+        // chunk: &mut Chunk, // Die meisten Blöcke sollten aufgrund von Performance im Chunk selbst platziert werden
+        chunk_data: &mut ChunkData,
+    ) {
+        for structure_block in &structure.blocks {
+            let wx = world_origin_x + structure_block.o_x;
+            let wy = world_origin_y + structure_block.o_y;
+            let wz = world_origin_z + structure_block.o_z;
+
+            // Das hier ist ein wenig teuer also mal schauen
+            chunk_data.set_world_block(wx, wy, wz, structure_block.block);
         }
-        false
     }
+}
+
+
+impl Structure {
+    pub fn oak_tree() -> Self {
+        let mut blocks = Vec::new();
+
+        for y in 0..5 {
+            blocks.push(StructureBlock {
+                o_x: 0,
+                o_y: y,
+                o_z: 0,
+                block: BlockType::OakLog
+            });
+        }
+        Self { blocks }
+    }
+}
+
+
+
+/// Erzeugt eine deterministische Zufallszahl [0.0, 1.0] für ein (x, z) Koordinatenpaar
+fn hash2d(x: i32, z: i32, seed: u32) -> f32 {
+    let mut h = (x as u32)
+        .wrapping_mul(374761393)
+        .wrapping_add((z as u32).wrapping_mul(668265263))
+        .wrapping_add(seed);
+    h = (h ^ (h >> 13)).wrapping_mul(1274126161);
+    (h ^ (h >> 16)) as f32 / u32::MAX as f32
 }

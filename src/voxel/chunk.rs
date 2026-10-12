@@ -6,12 +6,20 @@ pub const CHUNK_SIZE: usize = 32;
 
 #[derive(Clone)]
 pub struct Chunk {
-    blocks: Vec<BlockType> // Länge Chunksizepow3
+    blocks: Vec<BlockType>, // Länge Chunksizepow3
+    pub state: GenState, // s. Implementierung
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GenState { // Wegen Multipass generation
+    None, // Beim Start auf nichs
+    Tarrain, // Nur grobes Tarrain
+    Structures // Mit den Strukturen
 }
 
 impl Chunk {
     pub fn new() -> Self {
-        Self { blocks: vec![BlockType::default(); CHUNK_SIZE.pow(3)] }
+        Self { blocks: vec![BlockType::default(); CHUNK_SIZE.pow(3)], state: GenState::None }
     }
     pub fn index(x: usize, y: usize, z: usize) -> usize {
         x + y * CHUNK_SIZE + z * CHUNK_SIZE * CHUNK_SIZE // Das ist logisch wowi

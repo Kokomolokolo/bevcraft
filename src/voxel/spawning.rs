@@ -6,7 +6,7 @@ use bevy::{prelude::*, tasks::{AsyncComputeTaskPool, futures_lite::future}};
 
 use avian3d::prelude::*;
 
-use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, ComputeMeshTask, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos, meshing::{ChunkMeshResult, build_chunk_mesh}}, world::WorldGenerator};
+use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, ComputeMeshTask, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos, meshing::{ChunkMeshResult, build_chunk_mesh}}, world::WorldGenerator};
 
 pub const WORLD_HEIGHT: i32 = 5;
 
@@ -24,7 +24,7 @@ pub fn spawn_chunks_around_player(mut spawner: ChunkParams, player_q: Query<&Tra
     );
 
     // Lazy chunk loading - TODO
-    const MAX_CHUNKS_PER_FRAME: i32 = 2000;
+    const MAX_CHUNKS_PER_FRAME: i32 = 500; // Egal, da multithreaded
     let mut spawned_this_frame = 0;
     
     for x in -render_distance..=render_distance {
@@ -67,6 +67,9 @@ pub fn generate_chunk_data_aroud_player(
         0, 
         (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
     );
+    // ======================
+    // Phase 1 - Tarrain
+    // ======================
     
     // Die Data wird mit einer höheren Distanze gerendert, damit inter chunk culling auch außen funktioniert
     let data_render_distance: i32 = render_distance + 2;
@@ -74,10 +77,42 @@ pub fn generate_chunk_data_aroud_player(
         for z in -data_render_distance..=data_render_distance {
             for y in 0..=WORLD_HEIGHT {
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
+                // Stellt die Chunk State auf Tarrain
                 chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
             }
         }
     }
+
+    // ======================
+    // Phase 2 - Strukturen
+    // ======================
+    let structure_render_distance = data_render_distance - 1;
+
+    for x in -structure_render_distance..=structure_render_distance {
+        for z in -structure_render_distance..=structure_render_distance {
+            for y in 0..=WORLD_HEIGHT {
+                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
+                let pos = ChunkPos(chunk_pos);
+
+                // Prüfen ob chunk bereits tarrin hat oder gff schon fertig ist
+                let needs_structures = if let Some(chunk) = chunk_data.0.get(&pos) {
+                    chunk.state == GenState::Tarrain
+                } else {
+                    false
+                };
+
+                if needs_structures {
+                    // Strukturen generieren
+                    generator.spawn_structures(pos, &mut chunk_data);
+
+                    if let Some(chunk) = chunk_data.0.get_mut(&pos) {
+                        chunk.state = GenState::Structures;
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 // Spawner kann nicht so übergeben werden aufgrund von borrow checker Problemen
@@ -238,7 +273,6 @@ pub fn despawn_chunks(
     // Aus den Resourcen entfernen
     for pos in to_remove {
         chunk_map.0.remove(&pos);
-        //chunk_data.0.remove(&pos);
     }
 }
 

@@ -9,6 +9,8 @@ pub enum BlockType {
     Stone,
     Water,
     Sand,
+    OakLog,
+    OakLeaves,
 }
 
 impl BlockType {

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{voxel::block::BlockType, world::{biomes::BiomeType::{Desert, Mountains, Ocean, Plains, SpikyMountains}, tarrain::lerp}};
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum BiomeType {
     Plains,
     Desert,

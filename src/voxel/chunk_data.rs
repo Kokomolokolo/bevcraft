@@ -2,7 +2,7 @@ use std::{collections::HashMap};
 
 use bevy::prelude::*;
 
-use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::ChunkPos}, world::WorldGenerator};
+use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos}, world::WorldGenerator};
 
 impl ChunkData {
     pub fn generate_chunk_tarrain_data(&mut self, pos: IVec3, generator: &Res<WorldGenerator>) {
@@ -17,6 +17,9 @@ impl ChunkData {
     
         // Chunk wird nach generationsregeln bearbeitet
         generator.generate_chunk_tarrain(&mut chunk, pos);
+
+        // Chunk state updaten
+        chunk.state = GenState::Tarrain;
         
         // Daten werden gepeichert
         self.0.insert(pos, chunk);
