@@ -19,7 +19,7 @@ pub fn setup_block_material(
     
     let opaque_handle = materials.add(StandardMaterial {
         base_color_texture: Some(atlas.clone()),
-        perceptual_roughness: 0.7,
+        perceptual_roughness: 0.9,
         metallic: 0.0,
         reflectance: 0.1,
         // base_color: Color::srgb(0.5, 0.5, 0.5),
@@ -28,11 +28,13 @@ pub fn setup_block_material(
         ..default()
     });
     let transparent_handle = materials.add(StandardMaterial {
-        //base_color_texture: Some(atlas),
-        base_color: Color::srgba(0.1, 0.1, 0.8, 0.8),
-        alpha_mode: AlphaMode::Blend,
-        cull_mode: None,
-        unlit: true,
+        base_color_texture: Some(atlas),
+        perceptual_roughness: 0.9,
+        metallic: 0.0,
+        reflectance: 0.1,
+        alpha_mode: AlphaMode::AlphaToCoverage,
+        // cull_mode: None,
+        // unlit: true,
         ..default()
     });
     commands.insert_resource(ChunkMaterial {opaque: opaque_handle, transparent: transparent_handle});

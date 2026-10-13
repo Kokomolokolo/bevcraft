@@ -13,18 +13,22 @@ impl Plugin for SettingsPlugin {
 
 #[derive(Resource)]
 pub struct GameSettings{
-    pub render_distance: i32
+    pub render_distance: i32,
+    pub shadows: bool,
 }
 
 impl Default for GameSettings {
     fn default() -> Self {
         #[cfg(target_arch = "wasm32")]
         let render = 10;
+        let shadows = false;
         #[cfg(not(target_arch = "wasm32"))]
         let render = 10;
+        let shadows = true;
 
         Self {
-            render_distance: render
+            render_distance: render,
+            shadows,
         }
     }
 }
@@ -37,6 +41,5 @@ fn change_render(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GameSetti
     if keys.just_pressed(KeyCode::ArrowDown) {
         settings.render_distance -= 1;
         println!("{}", settings.render_distance)
-
     }
 }

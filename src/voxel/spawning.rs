@@ -233,7 +233,7 @@ pub fn handle_spawn_task(
                     Mesh3d(spawner.meshes.add(transparent)),
                     MeshMaterial3d(spawner.material.transparent.clone()),
                     Transform::IDENTITY,
-                    NotShadowCaster, // Bis ich das besser löse erstmal keine Schatten davon
+                    NotShadowCaster, // Bis ich das besser löse erstmal keine Schatten davon muss verbessert werden, das schaut sehr gut aus mit Leaves
                 )).id();
                 spawner.commands.entity(entity).add_child(transparent_entity);
             }

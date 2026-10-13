@@ -80,7 +80,20 @@ impl Structure {
                             });
                         }
                     }
-                    if y == 5 || y == 6 {
+                    if y == 6 {
+                        if (x as i32).abs() == 1 && (z as i32).abs() == 1 {
+                            continue;
+                        }
+                        if (x as i32).abs() < 2 && (z as i32).abs() < 2 {
+                            blocks.push(StructureBlock {
+                                o_x: x,
+                                o_y: y,
+                                o_z: z,
+                                block: BlockType::OakLeave
+                            });
+                        }
+                    }
+                    if y == 5 {
                         if (x as i32).abs() < 2 && (z as i32).abs() < 2 {
                             blocks.push(StructureBlock {
                                 o_x: x,
@@ -101,7 +114,7 @@ impl Structure {
                 }
                 
             }
-            if y < 7 {
+            if y < 6 {
                 blocks.push(StructureBlock {
                     o_x: 0,
                     o_y: y,

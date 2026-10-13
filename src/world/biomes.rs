@@ -83,7 +83,7 @@ impl BiomeRegistry {
             Biome {
                 name: SpikyMountains,
                 target_noise: 0.9,
-                top_block: BlockType::Stone, // Schnee?
+                top_block: BlockType::Snow,
                 filler_block: BlockType::Stone,
                 base_height: 85.,
                 amplitude: 55.,

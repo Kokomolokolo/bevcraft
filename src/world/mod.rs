@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-use crate::{voxel::block::BlockType, world::biomes::BiomeRegistry};
+use crate::{AppState, voxel::block::BlockType, world::biomes::BiomeRegistry};
 // Hier wird alles logische Gepspawnt. Meine idee ist eine große API, eine generator struct, was dann beim spawnen jedes Chunks aufgerufen wird
 // und dann wird der Chunk nach den Regeln gemacht; Caves, Tarrain, Structures etc.
 
@@ -11,6 +11,9 @@ use crate::{voxel::block::BlockType, world::biomes::BiomeRegistry};
 mod tarrain;
 mod biomes;
 mod structures;
+mod clouds;
+
+use clouds::*;
 
 pub struct WorldPlugin;
 
@@ -19,6 +22,7 @@ impl Plugin for WorldPlugin {
         let mut rng = rand::thread_rng();
         let seed = rng.gen_range(0..420);
         app.insert_resource(WorldGenerator::new(seed));
+        app.add_systems(OnEnter(AppState::InGame), spawn_clouds);
     }
 }
 #[derive(Resource)]

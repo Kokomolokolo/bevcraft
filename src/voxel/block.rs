@@ -11,6 +11,7 @@ pub enum BlockType {
     Sand,
     OakLog,
     OakLeave,
+    Snow,
 }
 
 impl BlockType {
@@ -18,6 +19,6 @@ impl BlockType {
         *self != BlockType::Air // Alle Blöcke außer die sind Solid
     }
     pub fn is_transparent(&self) -> bool {
-        *self == BlockType::Air || *self == BlockType::Water
+        *self == BlockType::Air || *self == BlockType::Water || *self == BlockType::OakLeave
     }
 }
