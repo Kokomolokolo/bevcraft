@@ -23,7 +23,7 @@ impl Default for GameSettings {
         let render = 10;
         let shadows = false;
         #[cfg(not(target_arch = "wasm32"))]
-        let render = 10;
+        let render = 5;
         let shadows = true;
 
         Self {

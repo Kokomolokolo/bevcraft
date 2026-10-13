@@ -8,7 +8,7 @@ pub fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut LinearVelocity, &Transform), With<Player>>,
 ) {
-    const SPEED: f32 = 3.0;
+    const SPEED: f32 = 5.0;
 
     for (mut velocity, transform) in &mut query {
         let forward = transform.forward();
@@ -20,7 +20,7 @@ pub fn player_movement(
         if keyboard.pressed(KeyCode::KeyD) {dir += *right}
 
 
-        if dir != Vec3::ZERO{
+        if dir != Vec3::ZERO {
             dir = dir.normalize();
         }
         

@@ -172,8 +172,8 @@ pub fn spawn_chunk(
         let mesh_result = build_chunk_mesh(chunk, &chunk_pos, &neighbors);
 
         let collider = mesh_result.opaque.as_ref().and_then(|m| {
-            None
-            //Collider::trimesh_from_mesh(m)
+            //None
+            Collider::trimesh_from_mesh(m)
         });
 
         ChunkMeshResult {
@@ -221,6 +221,7 @@ pub fn handle_spawn_task(
                 // Der Collider, falls vorhanden
                 if let Some(collider) = result.collider {
                     mesh.insert(collider);
+                    mesh.insert(RigidBody::Static);
                 }
 
                 let child_id = mesh.id();

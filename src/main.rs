@@ -40,7 +40,7 @@ fn main() {
         .add_plugins(CameraPlugin)
         .add_plugins((LoaderPlugin, MenuPlugin, SettingsPlugin, VoxxelPlugin, WorldPlugin, PlayerPlugin, GUIPlugin))
         .add_plugins(PhysicsPlugins::default())
-        //.add_plugins(PhysicsDebugPlugin::default())
+        // .add_plugins(PhysicsDebugPlugin::default())
         .run();
 }
 
