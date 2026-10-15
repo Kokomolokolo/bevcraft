@@ -29,7 +29,7 @@ pub fn spawn_chunks_around_player(
 
     // Check ob der Spieler den Chunk wechselt. Wenn nein, dann wird nichts gespawnt
     if ChunkPos(player_chunk) == last_chunk.0 {
-        return;
+        //return;
     }
 
     // Lazy chunk loading - TODO
@@ -172,7 +172,17 @@ pub fn spawn_chunk(
         println!("Barely avoided a crash ;)");
         return;
     };
-    //let chunk = *neighbor_data.get(&pos).unwrap(); // Ob mich das nochmal abfuckt jaaaaaaaaaaa
+
+    // Check ob die Nachbarn alle dabei sind für korrektes cullling
+    if neighbor_data.len() < 7 {
+        if pos.0.y == 0 || pos.0.y == WORLD_HEIGHT {
+            if neighbor_data.len() != 6 {
+                return;
+            }
+        } else {
+            return;
+        }
+    }
     
     if chunk.is_empty() {
         // Leere Chunks brauchen kein Mesh
@@ -245,7 +255,7 @@ pub fn handle_spawn_task(
     3
     };
     let mut uploads_this_frame = 0;
-    println!("{}", uploads_per_frame);
+    
     for (entity, mut task) in tasks {
         if uploads_this_frame > uploads_per_frame {
             return;

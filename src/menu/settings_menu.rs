@@ -74,7 +74,7 @@ pub fn settings_scene() -> impl Scene {
 
 pub fn update_menu(spawn_as_q: Query<&mut Text, With<SettingsMarkerSpawnAs>>, mut settings: ResMut<GameSettings>) {
     for text in spawn_as_q {
-        *text = Text::new(format!(settings.spawn_player));
+        // *text = Text::new(format!(settings.spawn_player));
     }
 }
 
