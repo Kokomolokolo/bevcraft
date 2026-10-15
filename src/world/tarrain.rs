@@ -9,7 +9,7 @@ use crate::{voxel::{block::BlockType, chunk::{CHUNK_SIZE, Chunk}, components::Ch
 pub const SEA_LEVEL: i32 = 40;
 
 impl WorldGenerator {
-    pub fn generate_chunk_tarrain(&self, chunk: &mut Chunk, chunk_pos: ChunkPos) {
+    pub fn generate_chunk_tarrain(&self, chunk: &mut Chunk, chunk_pos: &ChunkPos) {
         let chunk_offset = chunk_pos.to_world();
         
         for x in 0..CHUNK_SIZE {

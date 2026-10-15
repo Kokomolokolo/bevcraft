@@ -6,15 +6,34 @@ use bevy::{light::NotShadowCaster, prelude::*, tasks::{AsyncComputeTaskPool, fut
 
 use avian3d::prelude::*;
 
-use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, ComputeMeshTask, LastPlayerChunk, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos, meshing::{ChunkMeshResult, build_chunk_mesh}}, world::WorldGenerator};
+use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap, ChunkParams, ComputeMeshTask, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos, meshing::{ChunkMeshResult, build_chunk_mesh}}, world::WorldGenerator};
 
 pub const WORLD_HEIGHT: i32 = 5;
 
-pub fn spawn_chunks_around_player(
+#[derive(Resource, Default)]
+pub struct ChunkWorkQueue {
+    pub tarrin_queue: Vec<ChunkPos>,
+    pub structure_queue: Vec<ChunkPos>,
+    pub mesh_queue: Vec<ChunkPos>,
+}
+
+/// =============================
+/// Die Spawning parameter 
+/// =============================
+
+const MAX_TARRAIN_PER_FRAME: usize = 3;
+const MAX_STRUCTURES_PER_FRAME: usize = 1;
+const MAX_MESH_TASKS_PER_FRAME: usize = 5;
+const MAX_MESH_UPLOADS_PER_FRAME: usize = 4;
+
+/// =============================
+/// Queing Spawning parameter 
+/// =============================
+ 
+pub fn queue_chunks_around_player(
     mut spawner: ChunkParams, 
     player_q: Query<&Transform, With<Player>>, 
     settings: Res<GameSettings>,
-    mut last_chunk: ResMut<LastPlayerChunk>,
 ) { // Also erstmal nur so spawne
     let render_distance = settings.render_distance as i32;
     
@@ -28,12 +47,8 @@ pub fn spawn_chunks_around_player(
     );
 
     // Check ob der Spieler den Chunk wechselt. Wenn nein, dann wird nichts gespawnt
-    if ChunkPos(player_chunk) == last_chunk.0 {
-        //return;
-    }
 
     // Lazy chunk loading - TODO
-    const MAX_CHUNKS_PER_FRAME: i32 = i32::MAX; // Egal, da multithreaded
     let mut spawned_this_frame = 0;
     
     for x in -render_distance..=render_distance {
@@ -51,21 +66,19 @@ pub fn spawn_chunks_around_player(
                 spawn_chunk(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
                 spawned_this_frame += 1;
     
-                if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
-                    return;
-                }
+
             }
             
         }
     }
 }
 
-pub fn generate_chunk_data_aroud_player(
+pub fn queue_chunk_data_aroud_player(
     mut chunk_data: ResMut<ChunkData>, 
     player_q: Query<&Transform, With<Player>>, 
     generator: Res<WorldGenerator>,
     settings: Res<GameSettings>,
-    last_chunk: Res<LastPlayerChunk>,
+    mut queue: ResMut<ChunkWorkQueue>,
 ) {
     let render_distance = settings.render_distance as i32;
 
@@ -78,19 +91,13 @@ pub fn generate_chunk_data_aroud_player(
         (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
     );
     
-    if ChunkPos(player_chunk) == last_chunk.0 {
-        // return;
-    }
     // ======================
     // Phase 1 - Tarrain
     // ======================
 
     // Für bessere performance langsameres Laden der Chunks
     // Das geht bisher nicht da so wie ich es aufgebaut habe bisher die gesamte Chunkdata da sein muss bevor der Chunk gespawnt werden soll
-    const MAX_TARRIN_CHUNKS: usize = 5; // Leicht höher da es wesentich billiger ist diese zu bauen
-    const MAX_STRUKTURE_CHUNKS: usize = 3;
-    let mut tarrain_chunks_this_frame = 0;
-    let mut structure_chunks_this_frame = 0;
+
     // Die Data wird mit einer höheren Distanze gerendert, damit inter chunk culling auch außen funktioniert
     let data_render_distance: i32 = render_distance + 2;
         
@@ -98,16 +105,12 @@ pub fn generate_chunk_data_aroud_player(
         for z in -data_render_distance..=data_render_distance {
             for y in 0..=WORLD_HEIGHT {
                 // Abbrechen wenn zu viele diesen Frame
-                if tarrain_chunks_this_frame > MAX_TARRIN_CHUNKS {
-                    // return;
-                }
                 
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
-                if !chunk_data.0.contains_key(&ChunkPos(chunk_pos)) {
+                if !chunk_data.0.contains_key(&ChunkPos(chunk_pos)) && !queue.tarrin_queue.contains(&ChunkPos(chunk_pos)) {
                     // Stellt die Chunk State auf Tarrain
-                    chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
-
-                    tarrain_chunks_this_frame += 1;
+                    // chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
+                    queue.tarrin_queue.push(ChunkPos(chunk_pos));
                 }
             }
         }
@@ -122,13 +125,13 @@ pub fn generate_chunk_data_aroud_player(
     for x in -structure_render_distance..=structure_render_distance {
         for z in -structure_render_distance..=structure_render_distance {
             for y in 0..=WORLD_HEIGHT {
-                
-                if structure_chunks_this_frame > MAX_STRUKTURE_CHUNKS {
-                    // return;
-                }
-                
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
                 let pos = ChunkPos(chunk_pos);
+
+                // Wenn bereits in der Queue
+                if queue.tarrin_queue.contains(&pos) {
+                    return;
+                }
                 
                 // Prüfen ob chunk bereits tarrin hat oder gff schon fertig ist
                 let needs_structures = if let Some(chunk) = chunk_data.0.get(&pos) {
@@ -139,18 +142,47 @@ pub fn generate_chunk_data_aroud_player(
 
                 if needs_structures {
                     // Strukturen generieren
-                    generator.spawn_structures(pos, &mut chunk_data);
+                    //generator.spawn_structures(pos, &mut chunk_data);
 
-                    if let Some(chunk) = chunk_data.0.get_mut(&pos) {
-                        chunk.state = GenState::Structures;
-                    }
-                    structure_chunks_this_frame += 1
+                    queue.tarrin_queue.push(pos);
                 }
             }
         }
     }
-
 }
+
+/// =============================
+/// Verarbeiten der Queue
+/// =============================
+
+pub fn generate_chunk_data_from_queue(
+    mut chunk_data: ResMut<ChunkData>, 
+    player_q: Query<&Transform, With<Player>>, 
+    generator: Res<WorldGenerator>,
+    settings: Res<GameSettings>,
+    mut queue: ResMut<ChunkWorkQueue>,
+) {
+    let mut tarrin_this_frame = 0;
+    let mut structures_this_frame = 0;
+
+    // Tarrain Chunks
+    for pos in queue.tarrin_queue.t {
+        // Das tarrin generieren
+        chunk_data.generate_chunk_tarrain_data(&pos, &generator);
+
+        tarrin_this_frame += 1;
+
+        if tarrin_this_frame > MAX_TARRAIN_PER_FRAME {
+            return;
+        }
+    }
+
+    // Structure Chunks
+    for (idx, pos) in queue.structure_queue.iter().enumerate() {
+        
+    }
+}
+
 
 // Spawner kann nicht so übergeben werden aufgrund von borrow checker Problemen
 pub fn spawn_chunk(
@@ -307,20 +339,6 @@ pub fn handle_spawn_task(
     }
 }
 
-pub fn update_player_chunk(mut last_chunk: ResMut<LastPlayerChunk>, player_q: Query<&Transform, With<Player>>) {
-    let Ok(player_transform) = player_q.single() else { return; };
-
-    let player_chunk = IVec3::new(
-        (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32, 
-        0, 
-        (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
-    );
-    if ChunkPos(player_chunk) != last_chunk.0 {
-        println!("Changed Chunk");
-    }
-
-    last_chunk.0 = ChunkPos(player_chunk);
-}
 
 ///===============================
 /// Despawning

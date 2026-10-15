@@ -5,9 +5,7 @@ use bevy::prelude::*;
 use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos}, world::WorldGenerator};
 
 impl ChunkData {
-    pub fn generate_chunk_tarrain_data(&mut self, pos: IVec3, generator: &Res<WorldGenerator>) {
-        let pos = ChunkPos(pos);
-        
+    pub fn generate_chunk_tarrain_data(&mut self, pos: &ChunkPos, generator: &Res<WorldGenerator>) {        
         if self.0.contains_key(&pos) {
             return;
         }
@@ -22,7 +20,7 @@ impl ChunkData {
         chunk.state = GenState::Tarrain;
         
         // Daten werden gepeichert
-        self.0.insert(pos, chunk);
+        self.0.insert(*pos, chunk);
     }
 
     pub fn set_world_block(&mut self, x: i32, y: i32, z: i32, block: BlockType) {
