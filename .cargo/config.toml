@@ -1,0 +1,2 @@
+[alias]
+wasm = "build --profile wasm-release --target wasm32-unknown-unknown"

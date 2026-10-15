@@ -24,7 +24,7 @@ pub fn setup_block_material(
         reflectance: 0.1,
         // base_color: Color::srgb(0.5, 0.5, 0.5),
         //cull_mode: None,
-        //unlit: true,
+        // unlit: true,
         ..default()
     });
     let transparent_handle = materials.add(StandardMaterial {
@@ -32,14 +32,14 @@ pub fn setup_block_material(
         perceptual_roughness: 0.9,
         metallic: 0.0,
         reflectance: 0.1,
-        alpha_mode: AlphaMode::AlphaToCoverage,
+        alpha_mode: AlphaMode::Mask(0.2),
         // cull_mode: None,
         // unlit: true,
         ..default()
     });
     commands.insert_resource(ChunkMaterial {opaque: opaque_handle, transparent: transparent_handle});
     println!("Next State");
-    next_state.set(AppState::InGame);
+    next_state.set(AppState::Menu);
 }
 
 pub fn load_assets(

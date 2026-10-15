@@ -109,9 +109,6 @@ fn should_render_face(curr: BlockType, neighbor: BlockType) -> bool {
     }
 
     if curr.is_transparent() {
-        if curr == BlockType::OakLeave && neighbor == BlockType::OakLeave {
-            return true;
-        }
         !neighbor.is_solid() && neighbor != curr
     } else {
         !neighbor.is_solid() || neighbor.is_transparent()

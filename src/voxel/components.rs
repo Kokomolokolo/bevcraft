@@ -28,3 +28,9 @@ impl ChunkPos {
         Vec3::new(self.0.x as f32, self.0.y as f32 , self.0.z as f32)
     }
 }
+
+impl Default for ChunkPos {
+    fn default() -> Self {
+        Self(IVec3::new(67, 67, 67)) // Damit es direkt am Anfang aktualisiert wird.
+    }
+}

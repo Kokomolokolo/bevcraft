@@ -28,8 +28,9 @@ impl Plugin for VoxxelPlugin {
         app.init_resource::<ChunkMap>();
         app.init_resource::<ChunkData>();
         app.init_resource::<DirtyChunks>();
+        app.init_resource::<LastPlayerChunk>();
         app.add_systems(OnEnter(AppState::InGame), spawn_spawn_chunks); // Das bleibt hier nicht!
-        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, handle_spawn_task, despawn_chunks, drain_chunks, rebuild_dirty_chunks).chain().run_if(in_state(AppState::InGame)));
+        app.add_systems(Update, (generate_chunk_data_aroud_player, spawn_chunks_around_player, update_player_chunk, handle_spawn_task, despawn_chunks, drain_chunks, rebuild_dirty_chunks).chain().run_if(in_state(AppState::InGame)));
     }
 }
 // Basically ein chunk manager
@@ -52,6 +53,9 @@ pub struct ChunkMaterial{
 
 #[derive(Component)]
 pub struct ComputeMeshTask(pub Task<ChunkMeshResult>); // Für das asycrone meshen
+
+#[derive(Resource, Default)]
+pub struct LastPlayerChunk(pub ChunkPos);
 
 #[derive(SystemParam)]
 pub struct ChunkParams<'w, 's> {

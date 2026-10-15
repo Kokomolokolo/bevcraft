@@ -2,6 +2,9 @@ use bevy::prelude::*;
 
 use crate::{AppState, menu::{MenuMarker, button}, settings::GameSettings};
 
+#[derive(Component, Clone, Copy, Default)]
+pub struct SettingsMarkerSpawnAs;
+
 pub fn settings_scene() -> impl Scene {
     bsn! {
         Node {
@@ -26,14 +29,14 @@ pub fn settings_scene() -> impl Scene {
             ),
             (
                 button("Render Distance +")
-                on(|event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
                     settings.render_distance += 1;
                     println!("{}", settings.render_distance);
                 })
             ),
             (
                 button("Render Distance -")
-                on(|event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
                     
                     if settings.render_distance > 2 {
                         settings.render_distance -= 1;
@@ -43,11 +46,35 @@ pub fn settings_scene() -> impl Scene {
             ),
             (
                 button("Back")
-                on(|event: On<Pointer<Press>>, mut next_state: ResMut<NextState<AppState>>|
+                on(|_event: On<Pointer<Press>>, mut next_state: ResMut<NextState<AppState>>|
                     next_state.set(AppState::Menu)
                 )
             ),
+            (
+                SettingsMarkerSpawnAs
+                button("Spawning as: Player")
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                    if settings.spawn_player {
+                        settings.spawn_player = false
+                    } else {
+                        settings.spawn_player = true;
+                    }
+                })
+            ),
+            (
+                button("Toggle shadows")
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                    settings.render_distance += 1;
+                    println!("{}", settings.render_distance);
+                })
+            ),
         ]
+    }
+}
+
+pub fn update_menu(spawn_as_q: Query<&mut Text, With<SettingsMarkerSpawnAs>>, mut settings: ResMut<GameSettings>) {
+    for text in spawn_as_q {
+        *text = Text::new(format!(settings.spawn_player));
     }
 }
 

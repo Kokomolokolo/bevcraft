@@ -41,11 +41,12 @@ fn button(lable: &str) -> impl Scene {
             width: px(350),
             height: px(50),
             border: px(5),
-            border_radius: BorderRadius::MAX,
+            // border_radius: BorderRadius::,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
         }
-        BorderColor::from(Color::BLACK)
+        BorderColor::from(Color::WHITE)
+        BackgroundColor(Color::srgb(0.4, 0.4, 0.4))
         Children [(
             Text(lable)
             TextFont {

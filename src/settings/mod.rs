@@ -15,6 +15,7 @@ impl Plugin for SettingsPlugin {
 pub struct GameSettings{
     pub render_distance: i32,
     pub shadows: bool,
+    pub spawn_player: bool,
 }
 
 impl Default for GameSettings {
@@ -23,12 +24,13 @@ impl Default for GameSettings {
         let render = 10;
         let shadows = false;
         #[cfg(not(target_arch = "wasm32"))]
-        let render = 5;
-        let shadows = true;
+        let render = 20;
+        let shadows = false;
 
         Self {
             render_distance: render,
             shadows,
+            spawn_player: true,
         }
     }
 }

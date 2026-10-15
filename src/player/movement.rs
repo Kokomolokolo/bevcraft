@@ -62,15 +62,13 @@ pub fn player_look(
     }
 }
 
-pub fn player_jump(keyboard: Res<ButtonInput<KeyCode>>, mut query: Query<(&mut LinearVelocity, &ShapeHits), With<Player>>) {
+pub fn player_jump(keyboard: Res<ButtonInput<KeyCode>>, mut query: Query<&mut LinearVelocity, With<Player>>) {
     const JUMP_SPEED: f32 = 5.0;
     
-    for (mut velocity, hits) in query.iter_mut() {
-        let grounded = hits.iter().any(|hit| hit.normal1.y > 0.7);
-        if !grounded {
-            //println!("ALARMM!")
+    for mut velocity in query.iter_mut() {
+        if keyboard.just_pressed(KeyCode::Space) { 
+            velocity.y = JUMP_SPEED
         }
-        if grounded && keyboard.just_pressed(KeyCode::Space) {velocity.y = JUMP_SPEED}
     }
 }
 
