@@ -2,11 +2,10 @@ use std::{collections::HashMap};
 
 use bevy::prelude::*;
 
-use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos}, world::WorldGenerator};
+use crate::{voxel::{ChunkData, block::BlockType, chunk::{CHUNK_SIZE, Chunk, GenState}, components::ChunkPos, spawning::WORLD_HEIGHT}, world::WorldGenerator};
 
 impl ChunkData {
-    pub fn generate_chunk_tarrain_data(&mut self, pos: IVec3, generator: &Res<WorldGenerator>) {
-        let pos = ChunkPos(pos);
+    pub fn generate_chunk_tarrain_data(&mut self, pos: ChunkPos, generator: &Res<WorldGenerator>) {
         
         if self.0.contains_key(&pos) {
             return;
@@ -56,7 +55,41 @@ impl ChunkData {
         }
         None
     }
+    pub fn has_all_neighbor_states(&self, pos: ChunkPos, target_state: GenState) -> bool {
+        let target_neighbor_num = if pos.0.y == 0 || pos.0.y == WORLD_HEIGHT {
+            6
+        } else {
+            7
+        };
 
+        let neighbors = self.get_chunk_and_neighbors(pos);
+
+        if neighbors.len() < target_neighbor_num {
+            return false;
+        }
+
+        for neighbor in neighbors.values() {
+            let is_ready = match target_state {
+                GenState::Tarrain => {
+                    matches!(neighbor.state, GenState::Meshed | GenState::Tarrain | GenState::Structures)
+                }
+                GenState::Structures => {
+                    matches!(neighbor.state, GenState::Meshed | GenState::Structures)
+                }
+                GenState::Meshed => {
+                    matches!(neighbor.state, GenState::Meshed )
+                }
+                GenState::None => {
+                    matches!(neighbor.state, GenState::None)
+                }
+            };
+            if !is_ready {
+                return false;
+            }
+        }
+        true
+    }
+    
     // Gibt den Chunk selbst sowie alle Nachbarn zurück. Chunk selbst hat eine ChunkPos von 0
     pub fn get_chunk_and_neighbors(&self, pos: ChunkPos) -> HashMap<ChunkPos, &Chunk> {
         let mut return_map = HashMap::new();

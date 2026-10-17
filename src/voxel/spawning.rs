@@ -1,6 +1,6 @@
 // Wird sich um das spawnen der chunks gekümmert
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use bevy::{light::NotShadowCaster, prelude::*, tasks::{AsyncComputeTaskPool, futures_lite::future}};
 
@@ -10,13 +10,181 @@ use crate::{player::Player, settings::GameSettings, voxel::{ChunkData, ChunkMap,
 
 pub const WORLD_HEIGHT: i32 = 5;
 
-pub fn spawn_chunks_around_player(
+//======================
+// Chunk Spawn Settings
+//======================
+pub const TARRAIN_CHUNKS_PER_FRAME: usize = 5;
+pub const STRUCTURE_CHUNKS_PER_FRAME: usize = 3;
+pub const MESH_TASKS_CHUNKS_PER_FRAME: usize = 5;
+pub const MESH_UPLOADS_CHUNKS_PER_FRAME: usize = 5;
+
+//======================
+// Queing
+//======================
+#[derive(Resource, Default)]
+pub struct ChunkSpawnQueue {
+    // Alle Positonen der Tarrain Chunks die in die Pipeline kommen.
+    // Neu Chunks, die neu generiert werden müssen fangen hier an und werden eingeseztzt
+    // Warten auf Tarrain
+    pub tarrain_queue: VecDeque<ChunkPos>,
+
+    // Warten auf alle nachbarn und dann selbst auf structures.
+    pub structure_queue: VecDeque<ChunkPos>,
+
+    // Alle Positionen der Chunks, welche bereit zu spawnen sind.
+    // Wartet darauf, dass alle nachbarn structuren haben
+    pub meshing_queue: VecDeque<ChunkPos>,
+}
+
+impl ChunkSpawnQueue {
+    fn add_to_queue(&mut self, pos: ChunkPos) {
+        self.tarrain_queue.push_back(pos);
+    }
+    fn add_to_queue_priority(&mut self, pos: ChunkPos) {
+        self.tarrain_queue.push_front(pos);
+    }
+}
+
+pub fn build_chunk_queue(mut queue: ResMut<ChunkSpawnQueue>, settings: Res<GameSettings>) {
+    // Schreibe alle Chunks zum Anfang in die Pipeline. 
+    // Das wird seperat gemacht, da so zum Anfang die Chunks sortiert werden können.
+    let render_dist = settings.render_distance + 2; // 2 mehr als gerendert werdne für culling und korekte Strukturen
+    
+    let mut positions = Vec::new();
+    
+    for x in -render_dist..=render_dist {
+        for z in -render_dist..=render_dist {
+            for y in 0..=WORLD_HEIGHT {
+                positions.push(ChunkPos(IVec3::new(x, y, z)));
+            }
+        }
+    }
+    // Sortieren, sodass nähere Chunks schnelle Spawnen
+    positions.sort_by_key(|pos| IVec2::new(pos.0.x, pos.0.z).length_squared());
+    queue.tarrain_queue = VecDeque::from(positions);
+    info!("Chunk queue initialized with {} chunks.", queue.tarrain_queue.len());
+}
+
+pub fn process_terrain_queue(
+    mut queue: ResMut<ChunkSpawnQueue>,
+    mut chunk_data: ResMut<ChunkData>,
+    generator: Res<WorldGenerator>,
+) {
+    let limit = TARRAIN_CHUNKS_PER_FRAME;
+    let mut processed = 0;
+
+    println!("Terrain queue: {}, Structure queue: {}, Mesh queue: {}", queue.tarrain_queue.len(), queue.structure_queue.len(), queue.meshing_queue.len());
+    
+    while processed < limit {
+        let Some(pos) = queue.tarrain_queue.pop_front() else {
+            break; // Queue ist leer
+        };
+
+        // Wenn noch nicht da, Terrain generieren
+        if !chunk_data.0.contains_key(&pos) {
+            chunk_data.generate_chunk_tarrain_data(pos, &generator);
+            
+            if let Some(chunk) = chunk_data.0.get_mut(&pos) {
+                chunk.state = GenState::Tarrain;
+            } else {
+                warn!("Unexpected: Chunk not found in chunk data even though it should be there")
+            }
+
+            // An die nächst Queue geben
+            queue.structure_queue.push_back(pos);
+            processed += 1;
+        }
+    }
+}
+
+pub fn process_structure_queue(
+    mut queue: ResMut<ChunkSpawnQueue>,
+    mut chunk_data: ResMut<ChunkData>,
+    generator: Res<WorldGenerator>,
+    settings: Res<GameSettings>,
+    last_chunk: Res<LastPlayerChunk>, 
+) {
+    let limit = STRUCTURE_CHUNKS_PER_FRAME;
+    let mut process = 0;
+    let mut not_ready = Vec::new();
+    let render_distance = settings.render_distance;
+    let player_chunk = last_chunk.0.0;
+
+    while let Some(pos) = queue.structure_queue.pop_front() {
+        if process < limit {
+            if chunk_data.has_all_neighbor_states(pos, GenState::Tarrain) {
+                // Die structuren spawnen
+                generator.spawn_structures(pos, &mut chunk_data);
+
+                // State updaten
+                if let Some(chunk) = chunk_data.0.get_mut(&pos) {
+                    chunk.state = GenState::Structures;
+                }
+
+                let is_in_render_distance = 
+                    (pos.0.x - player_chunk.x).abs() <= render_distance && 
+                    (pos.0.z - player_chunk.z).abs() <= render_distance;                // Nur in die Meshing queue, wenn in der render distance.
+                if is_in_render_distance {
+                } 
+                queue.meshing_queue.push_back(pos);
+                process += 1;
+                continue;
+            }
+        }
+        // Entweder mehr als Limit oder nicht richtige Nachbarn
+        not_ready.push(pos);
+    }
+    for pos in not_ready {
+        queue.structure_queue.push_back(pos);
+    }
+}
+
+
+pub fn process_mesh_queue(
+    mut queue: ResMut<ChunkSpawnQueue>,
+    // mut chunk_data: ResMut<ChunkData>,
+    mut spawner: ChunkParams, 
+) {
+    let limit = MESH_TASKS_CHUNKS_PER_FRAME;
+    let mut processed = 0;
+    let mut not_ready = Vec::new();
+
+    while processed < limit {
+        let Some(pos) = queue.meshing_queue.pop_front() else {
+            break; // Queue ist leer
+        };
+
+        // Wenn alle Nachbarchunks bereits Strukturen haben
+        if spawner.chunk_data.has_all_neighbor_states(pos, GenState::Structures) {
+            spawn_chunk_task(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
+
+            if let Some(chunk) = spawner.chunk_data.0.get_mut(&pos) {
+                chunk.state = GenState::Meshed;
+            }
+
+            processed += 1;
+        }
+        else {
+            
+            not_ready.push(pos);
+        }
+    }
+    for pos in not_ready {
+        queue.meshing_queue.push_back(pos);
+    }
+}
+
+// ===============================
+// Die Queue auffüllen
+// ===============================
+pub fn queue_chunks_around_player(
     mut spawner: ChunkParams, 
     player_q: Query<&Transform, With<Player>>, 
     settings: Res<GameSettings>,
     mut last_chunk: ResMut<LastPlayerChunk>,
+    mut queue: ResMut<ChunkSpawnQueue>
 ) { // Also erstmal nur so spawne
-    let render_distance = settings.render_distance as i32;
+    let render_distance = settings.render_distance as i32 + 2;
     
     // Spieler Position
     let Ok(player_transform) = player_q.single() else { return; };
@@ -29,12 +197,8 @@ pub fn spawn_chunks_around_player(
 
     // Check ob der Spieler den Chunk wechselt. Wenn nein, dann wird nichts gespawnt
     if ChunkPos(player_chunk) == last_chunk.0 {
-        //return;
+        // return;
     }
-
-    // Lazy chunk loading - TODO
-    const MAX_CHUNKS_PER_FRAME: i32 = i32::MAX; // Egal, da multithreaded
-    let mut spawned_this_frame = 0;
     
     for x in -render_distance..=render_distance {
         for z in -render_distance..=render_distance {
@@ -43,117 +207,21 @@ pub fn spawn_chunks_around_player(
                 let chunk_pos = IVec3::new(x, y, z) + player_chunk;
                 let pos = ChunkPos(chunk_pos);
     
-                // Wurde bereits gespawnt
-                if spawner.chunk_map.0.contains_key(&pos) {
-                    continue;
-                }
-                
-                spawn_chunk(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
-                spawned_this_frame += 1;
-    
-                if spawned_this_frame >= MAX_CHUNKS_PER_FRAME {
-                    return;
-                }
-            }
-            
-        }
-    }
-}
+                let exists_in_data = spawner.chunk_data.0.contains_key(&pos);
+                let already_in_queue = queue.tarrain_queue.contains(&pos);
 
-pub fn generate_chunk_data_aroud_player(
-    mut chunk_data: ResMut<ChunkData>, 
-    player_q: Query<&Transform, With<Player>>, 
-    generator: Res<WorldGenerator>,
-    settings: Res<GameSettings>,
-    last_chunk: Res<LastPlayerChunk>,
-) {
-    let render_distance = settings.render_distance as i32;
-
-    // Spieler Position
-    let Ok(player_transform) = player_q.single() else { return; };
-
-    let player_chunk = IVec3::new(
-        (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32, 
-        0, 
-        (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
-    );
-    
-    if ChunkPos(player_chunk) == last_chunk.0 {
-        // return;
-    }
-    // ======================
-    // Phase 1 - Tarrain
-    // ======================
-
-    // Für bessere performance langsameres Laden der Chunks
-    // Das geht bisher nicht da so wie ich es aufgebaut habe bisher die gesamte Chunkdata da sein muss bevor der Chunk gespawnt werden soll
-    const MAX_TARRIN_CHUNKS: usize = 5; // Leicht höher da es wesentich billiger ist diese zu bauen
-    const MAX_STRUKTURE_CHUNKS: usize = 3;
-    let mut tarrain_chunks_this_frame = 0;
-    let mut structure_chunks_this_frame = 0;
-    // Die Data wird mit einer höheren Distanze gerendert, damit inter chunk culling auch außen funktioniert
-    let data_render_distance: i32 = render_distance + 2;
-        
-    for x in -data_render_distance..=data_render_distance {
-        for z in -data_render_distance..=data_render_distance {
-            for y in 0..=WORLD_HEIGHT {
-                // Abbrechen wenn zu viele diesen Frame
-                if tarrain_chunks_this_frame > MAX_TARRIN_CHUNKS {
-                    // return;
-                }
-                
-                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
-                if !chunk_data.0.contains_key(&ChunkPos(chunk_pos)) {
-                    // Stellt die Chunk State auf Tarrain
-                    chunk_data.generate_chunk_tarrain_data(chunk_pos, &generator);
-
-                    tarrain_chunks_this_frame += 1;
+                // Nur hinzufügen, wenn er wirklich komplett neu ist und nicht wartet
+                if !exists_in_data && !already_in_queue {
+                    info!("Actually adding chunk {:?} to tarrain_queue", pos);
+                    queue.tarrain_queue.push_back(pos);
                 }
             }
         }
     }
-    
-
-    // ======================
-    // Phase 2 - Strukturen
-    // ======================
-    let structure_render_distance = data_render_distance - 1;
-        
-    for x in -structure_render_distance..=structure_render_distance {
-        for z in -structure_render_distance..=structure_render_distance {
-            for y in 0..=WORLD_HEIGHT {
-                
-                if structure_chunks_this_frame > MAX_STRUKTURE_CHUNKS {
-                    // return;
-                }
-                
-                let chunk_pos = IVec3::new(x, y, z) + player_chunk;
-                let pos = ChunkPos(chunk_pos);
-                
-                // Prüfen ob chunk bereits tarrin hat oder gff schon fertig ist
-                let needs_structures = if let Some(chunk) = chunk_data.0.get(&pos) {
-                    chunk.state == GenState::Tarrain
-                } else {
-                    false
-                };
-
-                if needs_structures {
-                    // Strukturen generieren
-                    generator.spawn_structures(pos, &mut chunk_data);
-
-                    if let Some(chunk) = chunk_data.0.get_mut(&pos) {
-                        chunk.state = GenState::Structures;
-                    }
-                    structure_chunks_this_frame += 1
-                }
-            }
-        }
-    }
-
 }
 
 // Spawner kann nicht so übergeben werden aufgrund von borrow checker Problemen
-pub fn spawn_chunk(
+pub fn spawn_chunk_task(
     commands: &mut Commands,
     chunk_map: &mut HashMap<ChunkPos, Option<Entity>>,
     chunk_data: &ChunkData,
@@ -174,12 +242,15 @@ pub fn spawn_chunk(
     };
 
     // Check ob die Nachbarn alle dabei sind für korrektes cullling
+    // Das sollte überflüssig sein, ich denke ich behalte es aber estmal
     if neighbor_data.len() < 7 {
         if pos.0.y == 0 || pos.0.y == WORLD_HEIGHT {
             if neighbor_data.len() != 6 {
+                warn!("Wrong Chunk in queue");
                 return;
             }
         } else {
+            warn!("Wrong Chunk in queue");
             return;
         }
     }

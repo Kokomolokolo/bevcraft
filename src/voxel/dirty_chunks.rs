@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::voxel::{ChunkMap, ChunkParams, DirtyChunks, components::ChunkPos, spawning::{WORLD_HEIGHT, spawn_chunk}};
+use crate::voxel::{ChunkMap, ChunkParams, DirtyChunks, components::ChunkPos, spawning::{WORLD_HEIGHT, spawn_chunk_task}};
 
 pub fn rebuild_dirty_chunks(
     mut dirty_chunks: ResMut<DirtyChunks>,
@@ -21,7 +21,7 @@ pub fn rebuild_dirty_chunks(
         }
 
         // Neues entity
-        spawn_chunk(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
+        spawn_chunk_task(&mut spawner.commands, &mut spawner.chunk_map.0, &spawner.chunk_data, pos);
     }
 }
 
