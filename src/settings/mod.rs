@@ -24,13 +24,13 @@ impl Default for GameSettings {
         let render = 10;
         let shadows = false;
         #[cfg(not(target_arch = "wasm32"))]
-        let render = 20;
+        let render = 3;
         let shadows = false;
 
         Self {
             render_distance: render,
             shadows,
-            spawn_player: true,
+            spawn_player: false,
         }
     }
 }

@@ -43,7 +43,7 @@ pub fn setup_camera(
     let start = (settings.render_distance * CHUNK_SIZE as i32) as f32;
 
     if settings.spawn_player {
-        //return;
+        return;
     }
     commands.spawn((
         Camera3d::default(),

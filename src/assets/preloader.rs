@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::{image::ImageSampler, prelude::*};
 
 use crate::{AppState, assets::BevcraftAssets, voxel::ChunkMaterial};
@@ -45,12 +47,14 @@ pub fn setup_block_material(
 pub fn load_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    
 ) {
-    let atlas = asset_server.load("textures/texture_atlas.png");
+    let mut models: HashMap<String, Handle<WorldAsset>> = HashMap::new();
 
+    models.insert("pig".to_string(), asset_server.load(
+        GltfAssetLabel::Scene(0).from_asset(format!("models/pig.glb"))
+    ));
     commands.insert_resource(BevcraftAssets {
-        atlas
+        models
     });
     println!("Loaded atlas.")
 }

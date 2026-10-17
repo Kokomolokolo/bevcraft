@@ -10,6 +10,7 @@ mod world;
 mod gui;
 mod menu;
 mod settings;
+mod mobs;
 
 use voxel::VoxxelPlugin;
 use player::PlayerPlugin;
@@ -19,6 +20,7 @@ use world::WorldPlugin;
 use gui::GUIPlugin;
 use menu::MenuPlugin;
 use settings::SettingsPlugin;
+use mobs::MobPlugin;
 
 use crate::settings::GameSettings;
 
@@ -38,7 +40,16 @@ fn main() {
         .init_state::<AppState>()
         .add_systems(Startup, setup)
         .add_plugins(CameraPlugin)
-        .add_plugins((LoaderPlugin, MenuPlugin, SettingsPlugin, VoxxelPlugin, WorldPlugin, PlayerPlugin, GUIPlugin))
+        .add_plugins((
+            LoaderPlugin, 
+            MenuPlugin, 
+            SettingsPlugin, 
+            VoxxelPlugin, 
+            WorldPlugin, 
+            PlayerPlugin, 
+            GUIPlugin, 
+            MobPlugin
+        ))
         .add_plugins(PhysicsPlugins::default())
         // .add_plugins(PhysicsDebugPlugin::default())
         .run();
