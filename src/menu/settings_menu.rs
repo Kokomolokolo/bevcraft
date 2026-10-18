@@ -7,6 +7,7 @@ pub struct SettingsMarkerSpawnAs;
 
 pub fn settings_scene() -> impl Scene {
     bsn! {
+        MenuMarker
         Node {
             width: percent(100.0),
             height: percent(100.0),
@@ -16,8 +17,10 @@ pub fn settings_scene() -> impl Scene {
             column_gap: px(5),
             row_gap: px(5),
         }
-        BackgroundColor(Color::srgb(0.2, 0.2, 0.2))
-        MenuMarker
+        ImageNode {
+            image: "background.png",
+            image_mode: NodeImageMode::Stretch,
+        }
         Children[
             (
                 Text::new("Settings")
@@ -45,14 +48,18 @@ pub fn settings_scene() -> impl Scene {
                 })
             ),
             (
-                button("Back")
-                on(|_event: On<Pointer<Press>>, mut next_state: ResMut<NextState<AppState>>|
-                    next_state.set(AppState::Menu)
-                )
+                button("Toggle shadows")
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                    if settings.shadows {
+                        settings.shadows = false
+                    } else {
+                        settings.shadows = true;
+                    }
+                })
             ),
             (
                 SettingsMarkerSpawnAs
-                button("Spawning as: Player")
+                button("Toggle Creative")
                 on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
                     if settings.spawn_player {
                         settings.spawn_player = false
@@ -62,24 +69,31 @@ pub fn settings_scene() -> impl Scene {
                 })
             ),
             (
-                button("Toggle shadows")
-                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
-                    settings.render_distance += 1;
-                    println!("{}", settings.render_distance);
-                })
+                button("Back")
+                on(|_event: On<Pointer<Press>>, mut next_state: ResMut<NextState<AppState>>|
+                    next_state.set(AppState::Menu)
+                )
             ),
         ]
     }
 }
 
 pub fn update_menu(spawn_as_q: Query<&mut Text, With<SettingsMarkerSpawnAs>>, mut settings: ResMut<GameSettings>) {
-    for text in spawn_as_q {
-        // *text = Text::new(format!(settings.spawn_player));
+    for mut text in spawn_as_q {
+        *text = Text::new(format!("Test, {}", settings.spawn_player));
     }
 }
 
-pub fn menu_check(keyboard: Res<ButtonInput<KeyCode>>, mut next_state: ResMut<NextState<AppState>>) {
-    if keyboard.pressed(KeyCode::Escape) {
-        next_state.set(AppState::InGame);
+pub fn settings_keybind(
+    keyboard: Res<ButtonInput<KeyCode>>, 
+    current_state: Res<State<AppState>>,
+    mut next_state: ResMut<NextState<AppState>>
+) {
+    if keyboard.just_pressed(KeyCode::Escape) {
+        match current_state.get() {
+            AppState::InGame => next_state.set(AppState::Settings),
+            AppState::Settings => next_state.set(AppState::InGame),
+            _ => {}
+        }
     }
 }

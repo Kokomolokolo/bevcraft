@@ -14,7 +14,11 @@ pub fn scene() -> impl Scene {
             column_gap: px(5),
             row_gap: px(5),
         }
-        BackgroundColor(Color::srgb(0.2, 0.2, 0.2))
+        //BackgroundColor(Color::srgb(0.2, 0.2, 0.2))
+        ImageNode {
+            image: "background.png",
+            image_mode: NodeImageMode::Stretch,
+        }
         Children[
             (
                 Text::new("Bevcraft")

@@ -8,7 +8,7 @@ pub fn player_mine_place_block(
     mut dirty_chunks: ResMut<DirtyChunks>,
     mouse_button: Res<ButtonInput<MouseButton>>,
 ) {
-    let Ok((camera, camera_transform)) = camera_q.single() else {
+    let Ok((_camera, camera_transform)) = camera_q.single() else {
         return;
     };
 

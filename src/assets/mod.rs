@@ -8,7 +8,6 @@ mod preloader;
 
 use preloader::*;
 
-use crate::AppState;
 
 impl Plugin for LoaderPlugin {
     fn build(&self, app: &mut App) {

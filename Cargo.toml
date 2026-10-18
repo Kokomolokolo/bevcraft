@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = {version = "0.19", features = ["dynamic_linking"]}
-#bevy = {version = "0.19"}
+#bevy = {version = "0.19", features = ["dynamic_linking"]}
+bevy = {version = "0.19"}
 avian3d = "0.7"
 noise = "0.9"
 rand = "0.8"
@@ -27,7 +27,8 @@ opt-level = 3
 # Spezielles Profil nur für WASM (Größen-Optimierung)
 [profile.wasm-release]
 inherits = "release"
-opt-level = 3
-lto = false
+opt-level = "s"
+lto = "thin"
 codegen-units = 16
-strip = false
+strip = true
+panic = "abort"

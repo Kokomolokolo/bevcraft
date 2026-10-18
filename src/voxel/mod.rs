@@ -32,7 +32,7 @@ impl Plugin for VoxxelPlugin {
         app.init_resource::<LastPlayerChunk>();
         
         app.add_systems(OnEnter(AppState::InGame), build_chunk_queue); 
-        app.add_systems(Update, (process_terrain_queue, process_structure_queue, process_mesh_queue, queue_chunks_around_player).run_if(in_state(AppState::InGame)));
+        app.add_systems(Update, (process_terrain_queue, process_structure_queue, process_mesh_queue, queue_chunks_around_player, cleanup_queues).chain().run_if(in_state(AppState::InGame)));
         app.add_systems(Update, (update_player_chunk, handle_spawn_task, despawn_chunks, drain_chunks, rebuild_dirty_chunks).chain().run_if(in_state(AppState::InGame)));
     }
 }
@@ -52,6 +52,13 @@ pub struct DirtyChunks(pub HashSet<ChunkPos>);
 pub struct ChunkMaterial{
     pub transparent: Handle<StandardMaterial>,
     pub opaque: Handle<StandardMaterial>
+}
+
+pub struct SpawningParameters {
+    pub tarrain_chunks_per_frame: usize,
+    pub structure_chunks_per_frame: usize,
+    pub mesh_tasks_per_frame: usize,
+    pub mesh_uploads_per_frame: usize,
 }
 
 #[derive(Component)]

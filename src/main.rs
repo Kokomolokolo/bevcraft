@@ -35,7 +35,16 @@ pub enum AppState {
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // das könnte man mal aufräumen aber es geht irgendwie nicht so wirklich   
+        .add_plugins(DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    fit_canvas_to_parent: true, // Passt das Canvas z.B. im Browser an
+                    ..default()
+                }),
+                ..default()
+            })
+            .set(ImagePlugin::default_nearest()) // Wichtig für pixel-scharfe Texturen (Pixel-Art)
+        )
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .init_state::<AppState>()
         .add_systems(Startup, setup)

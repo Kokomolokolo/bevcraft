@@ -5,7 +5,6 @@ use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 use crate::AppState;
 use crate::player::Player;
 use crate::settings::GameSettings;
-use crate::voxel::chunk::CHUNK_SIZE;
 
 pub struct CameraPlugin;
 
@@ -30,7 +29,7 @@ pub struct FpsCamera {
 impl Default for FpsCamera {
     fn default() -> Self {
         Self {
-            speed: 50.0,
+            speed: 100.0,
             sensitivity: 0.001,
         }
     }
@@ -40,8 +39,6 @@ pub fn setup_camera(
     mut commands: Commands,
     settings: Res<GameSettings>,
 ) { 
-    let start = (settings.render_distance * CHUNK_SIZE as i32) as f32;
-
     if settings.spawn_player {
         return;
     }
@@ -121,6 +118,8 @@ pub fn camera_look(
             
             transform.rotate_y(yaw);
             transform.rotate_local_x(pitch);
+
+            transform.rotation = transform.rotation.normalize();
         }
     }
 }

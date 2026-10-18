@@ -1,6 +1,6 @@
 // Wird sich um das spawnen der chunks gekümmert
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use bevy::{light::NotShadowCaster, prelude::*, tasks::{AsyncComputeTaskPool, futures_lite::future}};
 
@@ -13,10 +13,6 @@ pub const WORLD_HEIGHT: i32 = 5;
 //======================
 // Chunk Spawn Settings
 //======================
-pub const TARRAIN_CHUNKS_PER_FRAME: usize = 5;
-pub const STRUCTURE_CHUNKS_PER_FRAME: usize = 3;
-pub const MESH_TASKS_CHUNKS_PER_FRAME: usize = 5;
-pub const MESH_UPLOADS_CHUNKS_PER_FRAME: usize = 5;
 
 //======================
 // Queing
@@ -69,8 +65,9 @@ pub fn process_terrain_queue(
     mut queue: ResMut<ChunkSpawnQueue>,
     mut chunk_data: ResMut<ChunkData>,
     generator: Res<WorldGenerator>,
+    settings: Res<GameSettings>,
 ) {
-    let limit = TARRAIN_CHUNKS_PER_FRAME;
+    let limit = settings.spawning_parameters.tarrain_chunks_per_frame;
     let mut processed = 0;
 
     println!("Terrain queue: {}, Structure queue: {}, Mesh queue: {}", queue.tarrain_queue.len(), queue.structure_queue.len(), queue.meshing_queue.len());
@@ -102,16 +99,17 @@ pub fn process_structure_queue(
     mut chunk_data: ResMut<ChunkData>,
     generator: Res<WorldGenerator>,
     settings: Res<GameSettings>,
-    last_chunk: Res<LastPlayerChunk>, 
 ) {
-    let limit = STRUCTURE_CHUNKS_PER_FRAME;
+    let limit = settings.spawning_parameters.structure_chunks_per_frame;
     let mut process = 0;
     let mut not_ready = Vec::new();
-    let render_distance = settings.render_distance;
-    let player_chunk = last_chunk.0.0;
 
     while let Some(pos) = queue.structure_queue.pop_front() {
         if process < limit {
+            // Falls es eigentlich despawnen sollte
+            if !chunk_data.0.contains_key(&pos) {
+                continue;
+            }
             if chunk_data.has_all_neighbor_states(pos, GenState::Tarrain) {
                 // Die structuren spawnen
                 generator.spawn_structures(pos, &mut chunk_data);
@@ -121,11 +119,6 @@ pub fn process_structure_queue(
                     chunk.state = GenState::Structures;
                 }
 
-                let is_in_render_distance = 
-                    (pos.0.x - player_chunk.x).abs() <= render_distance && 
-                    (pos.0.z - player_chunk.z).abs() <= render_distance;                // Nur in die Meshing queue, wenn in der render distance.
-                if is_in_render_distance {
-                } 
                 queue.meshing_queue.push_back(pos);
                 process += 1;
                 continue;
@@ -143,9 +136,10 @@ pub fn process_structure_queue(
 pub fn process_mesh_queue(
     mut queue: ResMut<ChunkSpawnQueue>,
     // mut chunk_data: ResMut<ChunkData>,
-    mut spawner: ChunkParams, 
+    mut spawner: ChunkParams,
+    settings: Res<GameSettings>,
 ) {
-    let limit = MESH_TASKS_CHUNKS_PER_FRAME;
+    let limit = settings.spawning_parameters.mesh_tasks_per_frame;
     let mut processed = 0;
     let mut not_ready = Vec::new();
 
@@ -153,6 +147,10 @@ pub fn process_mesh_queue(
         let Some(pos) = queue.meshing_queue.pop_front() else {
             break; // Queue ist leer
         };
+
+        if !spawner.chunk_data.0.contains_key(&pos) {
+            continue;
+        }
 
         // Wenn alle Nachbarchunks bereits Strukturen haben
         if spawner.chunk_data.has_all_neighbor_states(pos, GenState::Structures) {
@@ -197,7 +195,7 @@ pub fn queue_chunks_around_player(
 
     // Check ob der Spieler den Chunk wechselt. Wenn nein, dann wird nichts gespawnt
     if ChunkPos(player_chunk) == last_chunk.0 {
-        // return;
+        return;
     }
     
     for x in -render_distance..=render_distance {
@@ -212,12 +210,45 @@ pub fn queue_chunks_around_player(
 
                 // Nur hinzufügen, wenn er wirklich komplett neu ist und nicht wartet
                 if !exists_in_data && !already_in_queue {
-                    info!("Actually adding chunk {:?} to tarrain_queue", pos);
                     queue.tarrain_queue.push_back(pos);
                 }
             }
         }
     }
+}
+
+pub fn cleanup_queues(
+    mut queue: ResMut<ChunkSpawnQueue>,
+    player_q: Query<&Transform, With<Player>>,
+    settings: Res<GameSettings>,
+    last_chunk: Res<LastPlayerChunk>,
+) {
+    // Das wird nicht gebraucht; Die Queue wird mit der Chunkdata entleert.
+    return;
+    let Ok(player_transform) = player_q.single() else { return; };
+
+    let player_chunk = IVec3::new(
+        (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32, 
+        0, 
+        (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
+    );
+    
+    let max_allowed_queue_dist = settings.render_distance + 6;
+
+    queue.tarrain_queue.retain(|pos| {
+        (pos.0.x - player_chunk.x).abs() <= max_allowed_queue_dist &&
+        (pos.0.z - player_chunk.z).abs() <= max_allowed_queue_dist
+    });
+    
+    queue.structure_queue.retain(|pos| {
+        (pos.0.x - player_chunk.x).abs() <= max_allowed_queue_dist &&
+        (pos.0.z - player_chunk.z).abs() <= max_allowed_queue_dist
+    });
+
+    queue.meshing_queue.retain(|pos| {
+        (pos.0.x - player_chunk.x).abs() <= max_allowed_queue_dist &&
+        (pos.0.z - player_chunk.z).abs() <= max_allowed_queue_dist
+    });
 }
 
 // Spawner kann nicht so übergeben werden aufgrund von borrow checker Problemen
@@ -315,20 +346,15 @@ pub fn spawn_chunk_task(
 
 pub fn handle_spawn_task(
     mut spawner: ChunkParams,
-    mut tasks: Query<(Entity, &mut ComputeMeshTask)>
+    mut tasks: Query<(Entity, &mut ComputeMeshTask)>,
+    settings: Res<GameSettings>,
 ) {
     let current_tasks = tasks.iter().len();
-    let uploads_per_frame = if current_tasks > 1000 {
-        500
-    } else if current_tasks > 500 {
-        50
-    } else {
-    3
-    };
+
     let mut uploads_this_frame = 0;
     
     for (entity, mut task) in tasks {
-        if uploads_this_frame > uploads_per_frame {
+        if uploads_this_frame > settings.spawning_parameters.mesh_uploads_per_frame {
             return;
         }
         // Prüfen ob die Task fertig ist
@@ -386,9 +412,6 @@ pub fn update_player_chunk(mut last_chunk: ResMut<LastPlayerChunk>, player_q: Qu
         0, 
         (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32
     );
-    if ChunkPos(player_chunk) != last_chunk.0 {
-        println!("Changed Chunk");
-    }
 
     last_chunk.0 = ChunkPos(player_chunk);
 }
@@ -401,12 +424,11 @@ pub fn despawn_chunks(
     mut chunk_data: ResMut<ChunkData>, 
     mut chunk_map: ResMut<ChunkMap>, 
     mut commands: Commands, 
+    mut queue: ResMut<ChunkSpawnQueue>,
     player_q: Query<&Transform, With<Player>>,
     settings: Res<GameSettings>,
 ) {
     let Ok(player_transform) = player_q.single() else { return; };
-
-    let render_distance = settings.render_distance as i32;
     
     let player_chunk = IVec3::new(
         (player_transform.translation.x / CHUNK_SIZE as f32).floor() as i32,
@@ -414,23 +436,34 @@ pub fn despawn_chunks(
         (player_transform.translation.z / CHUNK_SIZE as f32).floor() as i32 
     );
 
-    // Da sonst 2 mut zugriffe
-    let mut to_remove: Vec<ChunkPos> = Vec::new();
+    let keep_distance = settings.render_distance + 5;
+
+    // das ist cool
+    let outside = |pos: &ChunkPos| {
+        (pos.0.x - player_chunk.x).abs() > keep_distance
+            || (pos.0.z - player_chunk.z).abs() > keep_distance
+    };
+
+    queue.tarrain_queue.retain(|p| !outside(p));
+    queue.structure_queue.retain(|p| !outside(p));
+    queue.meshing_queue.retain(|p| !outside(p));
     
-    for (chunk_pos, entity) in chunk_map.0.iter() {
-        if (player_chunk.x - chunk_pos.0.x).abs() > render_distance + 5 
-        || (player_chunk.z - chunk_pos.0.z).abs() > render_distance + 5
-        {
-            if let Some(entity) = entity { // Wenn wirklich ein entity da ist
-                // Kann sein das keins da ist wenn der chunk bspw. leer ist
-                commands.entity(*entity).despawn();
-            }
-            to_remove.push(*chunk_pos);
-        }
-    }
-    // Aus den Resourcen entfernen
+    // Da sonst 2 mut zugriffe
+    let mut to_remove: HashSet<ChunkPos> = HashSet::new();
+
+    to_remove.extend(
+        chunk_data.0.keys().filter(|p| outside(*p)).copied()
+    );
+    to_remove.extend(
+        chunk_map.0.keys().filter(|p| outside(*p)).copied()
+    );
+
     for pos in to_remove {
-        chunk_map.0.remove(&pos);
+        if let Some(Some(entity)) = chunk_map.0.remove(&pos) {
+            commands.entity(entity).despawn();
+        }
+
+        chunk_data.0.remove(&pos);
     }
 }
 
