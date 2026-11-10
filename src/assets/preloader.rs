@@ -34,6 +34,7 @@ pub fn setup_block_material(
         perceptual_roughness: 0.9,
         metallic: 0.0,
         reflectance: 0.1,
+        //alpha_mode: AlphaMode::Blend,
         alpha_mode: AlphaMode::Mask(0.2),
         // cull_mode: None,
         // unlit: true,

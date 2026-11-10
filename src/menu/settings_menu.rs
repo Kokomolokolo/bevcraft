@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{AppState, menu::{MenuMarker, button}, settings::GameSettings};
+use crate::{AppState, menu::{MenuMarker, button}, settings::GameSettings, voxel::SpawningParameters};
 
 #[derive(Component, Clone, Copy, Default)]
 pub struct SettingsMarkerSpawnAs;
@@ -40,7 +40,6 @@ pub fn settings_scene() -> impl Scene {
             (
                 button("Render Distance -")
                 on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
-                    
                     if settings.render_distance > 2 {
                         settings.render_distance -= 1;
                         println!("{}", settings.render_distance)
@@ -66,6 +65,24 @@ pub fn settings_scene() -> impl Scene {
                     } else {
                         settings.spawn_player = true;
                     }
+                })
+            ),
+            (
+                button("Set speed: Ultra")
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                    settings.spawning_parameters = SpawningParameters::ultra();
+                })
+            ),
+            (
+                button("Set speed: Native")
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                    settings.spawning_parameters = SpawningParameters::native();
+                })
+            ),
+            (
+                button("Set speed: Web")
+                on(|_event: On<Pointer<Press>>, mut settings: ResMut<GameSettings>| {
+                    settings.spawning_parameters = SpawningParameters::wasm();
                 })
             ),
             (

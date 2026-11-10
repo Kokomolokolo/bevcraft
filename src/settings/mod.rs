@@ -7,7 +7,7 @@ pub struct SettingsPlugin;
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameSettings::default());
-        app.add_systems(Update, change_render.run_if(in_state(AppState::InGame)));
+        app.add_systems(Update, change_render_dist.run_if(in_state(AppState::InGame)));
     }
 } 
 
@@ -20,7 +20,7 @@ pub struct GameSettings {
 }
 
 impl SpawningParameters {
-    fn native() -> Self {
+    pub fn native() -> Self {
         Self {
             tarrain_chunks_per_frame: 15,
             structure_chunks_per_frame: 3,
@@ -28,7 +28,7 @@ impl SpawningParameters {
             mesh_uploads_per_frame: 4,
         }
     }
-    fn wasm() -> Self {
+    pub fn wasm() -> Self {
         Self {
             tarrain_chunks_per_frame: 3,
             structure_chunks_per_frame: 1,
@@ -36,7 +36,7 @@ impl SpawningParameters {
             mesh_uploads_per_frame: 1,
         }
     }
-    fn ultra() -> Self {
+    pub fn ultra() -> Self {
         Self {
             tarrain_chunks_per_frame: 30,
             structure_chunks_per_frame: 10,
@@ -66,7 +66,7 @@ impl Default for GameSettings {
     }
 }
 
-fn change_render(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GameSettings>) {
+fn change_render_dist(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<GameSettings>) {
     if keys.just_pressed(KeyCode::ArrowUp) {
         settings.render_distance += 1;
         println!("{}", settings.render_distance)
