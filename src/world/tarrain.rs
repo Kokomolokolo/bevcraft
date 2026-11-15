@@ -43,7 +43,7 @@ impl WorldGenerator {
     pub fn get_height_and_biom(&self, world_x: i32, world_z: i32) -> (i32, &Biome) {
         let biom_val = self.biom_noise.get([world_x as f64 * 0.005, world_z as f64 * 0.005]) as f32;
         let base_noise = self.tarrain_noise.get([world_x as f64 * 0.01, world_z as f64 * 0.01]) as f32;
-        let detail_noise = self.tarrain_noise.get([world_x as f64 * 0.03, world_z as f64 * 0.03]) as f32;
+        let detail_noise = self.detail_noise.get([world_x as f64 * 0.03, world_z as f64 * 0.03]) as f32;
 
         let (b1, b2, t) = self.registry.sample(biom_val as f32);
 
