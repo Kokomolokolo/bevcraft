@@ -70,7 +70,7 @@ pub fn process_terrain_queue(
     let limit = settings.spawning_parameters.tarrain_chunks_per_frame;
     let mut processed = 0;
 
-    println!("Terrain queue: {}, Structure queue: {}, Mesh queue: {}", queue.tarrain_queue.len(), queue.structure_queue.len(), queue.meshing_queue.len());
+    // println!("Terrain queue: {}, Structure queue: {}, Mesh queue: {}", queue.tarrain_queue.len(), queue.structure_queue.len(), queue.meshing_queue.len());
     
     while processed < limit {
         let Some(pos) = queue.tarrain_queue.pop_front() else {
@@ -197,6 +197,7 @@ pub fn queue_chunks_around_player(
     if ChunkPos(player_chunk) == last_chunk.0 {
         return;
     }
+
     
     for x in -render_distance..=render_distance {
         for z in -render_distance..=render_distance {

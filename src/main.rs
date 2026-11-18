@@ -2,6 +2,8 @@ use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
 use avian3d::prelude::*;
 use bevy::light::CascadeShadowConfigBuilder;
 
+use bevy::pbr::wireframe::{WireframeConfig, WireframePlugin};
+
 mod voxel;
 mod player;
 mod assets;
@@ -45,6 +47,9 @@ fn main() {
             })
             .set(ImagePlugin::default_nearest()) // Wichtig für pixel-scharfe Texturen (Pixel-Art)
         )
+        
+        .add_plugins(WireframePlugin::default())
+
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .init_state::<AppState>()
         .add_systems(Startup, setup)
@@ -67,7 +72,11 @@ fn main() {
 fn setup(
     mut commands: Commands, 
     settings: Res<GameSettings>,
+    mut wireframe_config: ResMut<WireframeConfig>,
 ) {
+
+    wireframe_config.global = false;
+
     if settings.shadows {
         commands.spawn((DirectionalLight {
                 illuminance: 10000.0, // Helligkeit der Sonne

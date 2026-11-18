@@ -7,7 +7,7 @@ pub struct SettingsPlugin;
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GameSettings::default());
-        app.add_systems(Update, change_render_dist.run_if(in_state(AppState::InGame)));
+        app.add_systems(Update, (change_render_dist, log_vertex_count).run_if(in_state(AppState::InGame)));
     }
 } 
 
@@ -75,4 +75,28 @@ fn change_render_dist(keys: Res<ButtonInput<KeyCode>>, mut settings: ResMut<Game
         settings.render_distance -= 1;
         println!("{}", settings.render_distance)
     }
+}
+
+
+fn log_vertex_count(
+    meshes: Res<Assets<Mesh>>,
+    query: Query<&Mesh3d>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+) {
+    // Nur bei F3 ausgeben
+    if !keyboard.just_pressed(KeyCode::F3) {
+        return;
+    }
+
+    let mut total_vertices = 0;
+
+    for mesh_handle in query.iter() {
+        if let Some(mesh) = meshes.get(&mesh_handle.0) {
+            if let Some(positions) = mesh.attribute(Mesh::ATTRIBUTE_POSITION) {
+                total_vertices += positions.len();
+            }
+        }
+    }
+
+    info!("Total Vertices: {}", total_vertices);
 }

@@ -44,6 +44,7 @@ impl ChunkMeshData {
     }
 }
 
+
 pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &HashMap<ChunkPos, &Chunk>) -> ChunkMeshResult {
     // Buffer statt die Hashmap, spaart cup zeit
     let buffer = create_padded_buffer(chunk, chunk_pos, &chunk_neighbor);
@@ -51,7 +52,17 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &Ha
     let mut opaque_data = ChunkMeshData::default();
     let mut transparent_data = ChunkMeshData::default();
 
+    let quads = find_greedy_quads(&buffer);
+
+    for (x, y, z, width, height, block) in quads {
+        let target_data = //&mut opaque_data;
+        if block.is_transparent() { &mut transparent_data} else { &mut opaque_data };
+
+        add_greedy_top(x, y, z, width, height, block, target_data);
+    }
+
     for x in 0..CHUNK_SIZE {
+        // continue;
         for y in 0..CHUNK_SIZE {
             for z in 0..CHUNK_SIZE {
                 
@@ -68,7 +79,7 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &Ha
                 let pos = Vec3::new(x as f32, y as f32, z as f32);
 
                 // Wenn der Nachtbar nicht solid ist also Luft, Wasser etc.
-                let render_top = should_render_face(block, buffer[pad_idx(px, py + 1, pz)]);
+                let render_top = false; // should_render_face(block, buffer[pad_idx(px, py + 1, pz)]);
                 let render_bottom = should_render_face(block, buffer[pad_idx(px, py - 1, pz)]);
                 let render_right = should_render_face(block, buffer[pad_idx(px + 1, py, pz)]);
                 let render_left = should_render_face(block, buffer[pad_idx(px - 1, py, pz)]);
@@ -99,11 +110,211 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &Ha
         collider: None, // Wird in spawning.rs geregelt
     }
 }
+
+
+
+fn find_greedy_quads(
+    buffer: &PaddedBuffer,
+) -> Vec<(usize, usize, usize, usize, usize, BlockType)> {
+    let mut quads = Vec::new();
+    
+    for y in 0..CHUNK_SIZE {
+        let mut mask = generate_face_mask(y, buffer);
+
+        for x in 0..CHUNK_SIZE {
+            for z in 0..CHUNK_SIZE {
+                let idx = x * CHUNK_SIZE + z;
+
+                let Some(block) = mask[idx] else {
+                    continue;
+                };
+
+                // Rechteck bestimmen
+                let width = find_width(&mask, x, z);
+                let height = find_height(&mask, x, z, width);
+
+                // In quads hinzufügen
+                quads.push((x, y, z, width, height, block));
+
+                clear_mask(&mut mask, x, z, width, height);
+            } 
+        }
+    }
+
+    quads
+}
+
+
+/// ======================
+// Meshing
+/// ======================
+
+fn add_greedy_top(
+    x: usize,
+    y: usize,
+    z: usize,
+    width: usize,
+    height: usize,
+    block: BlockType,
+    data: &mut ChunkMeshData,
+) {
+    let x = x as f32;
+    let y = y as f32;
+    let z = z as f32;
+
+    let height = height as f32;
+    let width = width as f32;
+
+    let base = data.vertices.len() as u32;
+
+    data.vertices.extend_from_slice(&[
+        [x, y + 1.0, z + width],
+        [x + height, y + 1.0, z + width],
+        [x + height, y + 1.0, z],
+        [x, y + 1.0, z],
+    ]);
+    data.normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
+    data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+    data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+    // Texturing
+    let (atlas_x, atlas_y) = get_atlas_cords(block, "top");
+    let uv_cords = calculate_uvs(atlas_x, atlas_y);
+    data.uvs.extend_from_slice(&uv_cords);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/// ======================
+// Hilfsfunktionen
+/// ======================
+
+// Generiert eine Mask aus Blocktype und None für die generierung des Meshes
+fn generate_face_mask(
+    y: usize,
+    buffer: &PaddedBuffer
+) -> Vec<Option<BlockType>> {
+    let mut mask = Vec::new();
+    
+    for x in 0..CHUNK_SIZE {
+        for z in 0..CHUNK_SIZE {
+            let px = x + 1;
+            let py = y + 1;
+            let pz = z + 1;
+
+            let block = buffer[pad_idx(px, py, pz)];
+
+            let render_top = should_render_face(block, buffer[pad_idx(px, py + 1, pz)]);
+
+            if render_top {
+                mask.push(Some(block));
+            } else {
+                mask.push(None);
+            }
+        }
+    }
+
+    mask
+}
+
+// Maxiamle width an einer Koordinate finden
+fn find_width(
+    mask: &Vec<Option<BlockType>>,
+    x: usize,
+    z: usize, 
+) -> usize {
+    let mut width = 1;
+
+    let idx = x * CHUNK_SIZE + z;
+    // Gibt es ein face
+    let Some(block) = mask[idx] else {
+        return 0;
+    };
+    
+    while z + width < CHUNK_SIZE {
+        let next_idx = x * CHUNK_SIZE + (z + width);
+
+        if mask[next_idx] == Some(block) {
+            width += 1;
+        } else {
+            break;
+        }
+    }
+
+    width
+}
+
+fn find_height(
+    mask: &Vec<Option<BlockType>>,
+    x: usize,
+    z: usize,
+    width: usize
+) -> usize {
+    let idx = x * CHUNK_SIZE + z;
+
+    let Some(block) = mask[idx] else {
+        return 0;
+    };
+
+    let mut height = 1;
+
+    'outer: while x + height < CHUNK_SIZE {
+
+        // Die höhe nach unten durchlaufen
+        for dz in 0..width {
+            let next_idx = (x + height) * CHUNK_SIZE + (dz + z);
+
+            if mask[next_idx] != Some(block) {
+                break 'outer;
+            }
+        }
+        // Die ganze Reihe passt
+        height += 1;
+    }
+
+    height
+}
+
+fn clear_mask(
+    mask: &mut Vec<Option<BlockType>>,
+    x: usize,
+    z: usize,
+    width: usize,
+    height: usize,
+) {
+    for dx in 0..height {
+        for dz in 0..width {
+            let index = (x + dx) * CHUNK_SIZE + (z + dz);
+            mask[index] = None;
+        }
+    }
+}
+
 /// ==================================================================
 /// HILFSFUNKTIONEN
 /// ==================================================================
 
 fn should_render_face(curr: BlockType, neighbor: BlockType) -> bool {
+    if curr == BlockType::Air {
+        return false;
+    }
     if neighbor == BlockType::Air {
         return true;
     }

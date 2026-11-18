@@ -21,7 +21,8 @@ impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
         let mut rng = rand::thread_rng();
         let seed = rng.gen_range(0..420);
-        app.insert_resource(WorldGenerator::new(seed));
+        app.insert_resource(WorldGenerator::default());
+        //app.insert_resource(WorldGenerator::new(seed));
         app.add_systems(OnEnter(AppState::InGame), spawn_clouds);
     }
 }
