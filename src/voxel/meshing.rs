@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, prelude::rust_2018};
 
 use avian3d::collision::collider::Collider;
 use bevy::{asset::RenderAssetUsages, prelude::*};
@@ -24,6 +24,16 @@ pub struct ChunkMeshResult {
     pub transparent: Option<Mesh>,
     pub collider: Option<Collider>
     // vielleicht collider?
+}
+
+#[derive(Clone, Copy)]
+enum FaceDirection {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    Front,
+    Back,
 }
 
 impl ChunkMeshData {
@@ -54,55 +64,14 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &Ha
 
     let quads = find_greedy_quads(&buffer);
 
-    for (x, y, z, width, height, block) in quads {
+    for (x, y, z, width, height, dir, block) in quads {
         let target_data = //&mut opaque_data;
         if block.is_transparent() { &mut transparent_data} else { &mut opaque_data };
 
-        add_greedy_top(x, y, z, width, height, block, target_data);
+        add_greedy_face(x, y, z, width, height, block, dir, target_data);
     }
 
-    for x in 0..CHUNK_SIZE {
-        // continue;
-        for y in 0..CHUNK_SIZE {
-            for z in 0..CHUNK_SIZE {
-                
-                let px = x + 1; // Da der Buffer bei -1 Beginnt
-                let py = y + 1;
-                let pz = z + 1;
-                
-                let block = chunk.get(x, y, z);
-
-                // Luft hat kein Mesh
-                if !block.is_solid() {
-                    continue;
-                }
-                let pos = Vec3::new(x as f32, y as f32, z as f32);
-
-                // Wenn der Nachtbar nicht solid ist also Luft, Wasser etc.
-                let render_top = false; // should_render_face(block, buffer[pad_idx(px, py + 1, pz)]);
-                let render_bottom = should_render_face(block, buffer[pad_idx(px, py - 1, pz)]);
-                let render_right = should_render_face(block, buffer[pad_idx(px + 1, py, pz)]);
-                let render_left = should_render_face(block, buffer[pad_idx(px - 1, py, pz)]);
-                let render_back = should_render_face(block, buffer[pad_idx(px, py, pz - 1)]);
-                let render_front = should_render_face(block, buffer[pad_idx(px, py, pz + 1)]);
-
-                // Auf welches Mesh soll hinzugefügt werden?
-                let target_data = //&mut opaque_data;
-                if block.is_transparent() { &mut transparent_data} else { &mut opaque_data };
-                add_faces(
-                    pos,
-                    block,
-                    target_data,
-                    render_top,
-                    render_bottom,
-                    render_right,
-                    render_left,
-                    render_back,
-                    render_front
-                );
-            }
-        }
-    }
+    
     ChunkMeshResult { 
         pos: *chunk_pos,
         opaque: if opaque_data.is_empty() { None } else {Some(opaque_data.build())}, 
@@ -115,29 +84,47 @@ pub fn build_chunk_mesh(chunk: &Chunk, chunk_pos: &ChunkPos, chunk_neighbor: &Ha
 
 fn find_greedy_quads(
     buffer: &PaddedBuffer,
-) -> Vec<(usize, usize, usize, usize, usize, BlockType)> {
+) -> Vec<(usize, usize, usize, usize, usize, FaceDirection, BlockType)> {
     let mut quads = Vec::new();
+
+    let directions = [
+        FaceDirection::Top,
+        FaceDirection::Bottom,
+        FaceDirection::Right,
+        FaceDirection::Left,
+        FaceDirection::Front,
+        FaceDirection::Back,
+    ];
     
-    for y in 0..CHUNK_SIZE {
-        let mut mask = generate_face_mask(y, buffer);
+    for dir in directions {
+        for slice in 0..CHUNK_SIZE {
+            let mut mask = generate_face_mask(slice, buffer, dir);
+    
+            for u in 0..CHUNK_SIZE {
+                for v in 0..CHUNK_SIZE {
+                    let idx = u * CHUNK_SIZE + v;
+    
+                    let Some(block) = mask[idx] else {
+                        continue;
+                    };
 
-        for x in 0..CHUNK_SIZE {
-            for z in 0..CHUNK_SIZE {
-                let idx = x * CHUNK_SIZE + z;
-
-                let Some(block) = mask[idx] else {
-                    continue;
-                };
-
-                // Rechteck bestimmen
-                let width = find_width(&mask, x, z);
-                let height = find_height(&mask, x, z, width);
-
-                // In quads hinzufügen
-                quads.push((x, y, z, width, height, block));
-
-                clear_mask(&mut mask, x, z, width, height);
-            } 
+                    // Rechteck bestimmen
+                    let width = find_width(&mask, u, v);
+                    let height = find_height(&mask, u, v, width);
+                    
+                    let (x, y, z) = match dir {
+                            FaceDirection::Back | FaceDirection::Front => (u, v, slice),
+                            FaceDirection::Bottom | FaceDirection::Top => (u, slice, v),
+                            FaceDirection::Left | FaceDirection::Right => (slice, u, v)
+                    };
+    
+    
+                    // In quads hinzufügen
+                    quads.push((x, y, z, width, height, dir, block));
+    
+                    clear_mask(&mut mask, u, v, width, height);
+                } 
+            }
         }
     }
 
@@ -149,57 +136,166 @@ fn find_greedy_quads(
 // Meshing
 /// ======================
 
-fn add_greedy_top(
+fn add_greedy_face (
     x: usize,
     y: usize,
     z: usize,
     width: usize,
     height: usize,
-    block: BlockType,
+    block_type: BlockType,
+    dir: FaceDirection,
     data: &mut ChunkMeshData,
 ) {
-    let x = x as f32;
-    let y = y as f32;
-    let z = z as f32;
-
-    let height = height as f32;
-    let width = width as f32;
-
-    let base = data.vertices.len() as u32;
-
-    data.vertices.extend_from_slice(&[
-        [x, y + 1.0, z + width],
-        [x + height, y + 1.0, z + width],
-        [x + height, y + 1.0, z],
-        [x, y + 1.0, z],
-    ]);
-    data.normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
-    data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-    data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
-    // Texturing
-    let (atlas_x, atlas_y) = get_atlas_cords(block, "top");
-    let uv_cords = calculate_uvs(atlas_x, atlas_y);
-    data.uvs.extend_from_slice(&uv_cords);
+    let block_height = if block_type == Water { 0.8 } else { 1.0 };
+    
+    match dir {
+        FaceDirection::Top => {
+            let x = x as f32;
+            let y = y as f32;
+            let z = z as f32;
+        
+            let height = height as f32;
+            let width = width as f32;
+        
+            let base = data.vertices.len() as u32;
+            // data.vertices.extend_from_slice(&[
+            //     [x, y + height, z + 1.0],
+            //     [x + 1.0, y + height, z + 1.0],
+            //     [x + 1.0, y + height, z],
+            //     [x, y + height, z],
+            // ]);
+            data.vertices.extend_from_slice(&[
+                [x, y + 1.0, z + width],
+                [x + height, y + 1.0, z + width],
+                [x + height, y + 1.0, z],
+                [x, y + 1.0, z],
+            ]);
+            data.normals.extend_from_slice(&[[0.0, 1.0, 0.0]; 4]);
+            data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+            // Texturing
+            let (atlas_x, atlas_y) = get_atlas_cords(block_type, "top");
+            let uv_cords = calculate_uvs(atlas_x, atlas_y);
+            data.uvs.extend_from_slice(&uv_cords);
+        },
+        FaceDirection::Bottom => {
+            let x = x as f32;
+            let y = y as f32;
+            let z = z as f32;
+        
+            let height = height as f32;
+            let width = width as f32;
+        
+            let base = data.vertices.len() as u32;
+            data.vertices.extend_from_slice(&[
+                [x, y, z],
+                [x + height, y, z ],
+                [x + height, y, z + width],
+                [x, y, z + width],
+            ]);
+            data.normals.extend_from_slice(&[[0.0, -1.0, 0.0]; 4]);
+            data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+            // Texturing
+            let (atlas_x, atlas_y) = get_atlas_cords(block_type, "bottom");
+            let uv_cords = calculate_uvs(atlas_x, atlas_y);
+            data.uvs.extend_from_slice(&uv_cords);
+        },
+        FaceDirection::Back => {
+            let x = x as f32;
+            let y = y as f32;
+            let z = z as f32;
+        
+            let height = height as f32;
+            let width = width as f32;
+        
+            let base = data.vertices.len() as u32;
+            data.vertices.extend_from_slice(&[
+                [x, y + width, z],
+                [x + height, y + width, z],
+                [x + height, y, z],
+                [x, y, z],
+            ]);
+            data.normals.extend_from_slice(&[[0.0, 0.0, -1.0]; 4]);
+            data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+            // Texturing
+            let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+            let uv_cords = calculate_uvs(atlas_x, atlas_y);
+            data.uvs.extend_from_slice(&uv_cords);
+        },
+        FaceDirection::Front => {
+            let x = x as f32;
+            let y = y as f32;
+            let z = z as f32;
+        
+            let height = height as f32;
+            let width = width as f32;
+        
+            let base = data.vertices.len() as u32;
+            data.vertices.extend_from_slice(&[
+                [x, y, z + 1.0],
+                [x + height, y, z + 1.0],
+                [x + height, y + width, z + 1.0],
+                [x, y + width, z + 1.0],
+            ]);
+            data.normals.extend_from_slice(&[[0.0, 0.0, 1.0]; 4]);
+            data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+            // Texturing
+            let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+            let uv_cords = calculate_uvs(atlas_x, atlas_y);
+            data.uvs.extend_from_slice(&uv_cords);
+        },
+        FaceDirection::Left => {
+            let x = x as f32;
+            let y = y as f32;
+            let z = z as f32;
+        
+            let height = height as f32;
+            let width = width as f32;
+        
+            let base = data.vertices.len() as u32;
+            data.vertices.extend_from_slice(&[
+                [x, y, z + width],
+                [x, y + height, z + width],
+                [x, y + height, z],
+                [x, y, z],
+            ]);
+            data.normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
+            data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+            // Texturing
+            let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+            let uv_cords = calculate_uvs(atlas_x, atlas_y);
+            data.uvs.extend_from_slice(&uv_cords);
+        },
+        FaceDirection::Right => {
+            let x = x as f32;
+            let y = y as f32;
+            let z = z as f32;
+        
+            let height = height as f32;
+            let width = width as f32;
+        
+            let base = data.vertices.len() as u32;
+            data.vertices.extend_from_slice(&[
+                [x + 1.0, y, z],
+                [x + 1.0, y + height, z],
+                [x + 1.0, y + height, z + width],
+                [x + 1.0, y, z + width],
+            ]);
+            data.normals.extend_from_slice(&[[-1.0, 0.0, 0.0]; 4]);
+            data.indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            data.colors.extend_from_slice(&[[1.0; 4]; 4]); // Den Slice der farben mal 4 für jeden Vertex
+            // Texturing
+            let (atlas_x, atlas_y) = get_atlas_cords(block_type, "side");
+            let uv_cords = calculate_uvs(atlas_x, atlas_y);
+            data.uvs.extend_from_slice(&uv_cords);
+        },
+        _ => {}
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /// ======================
@@ -207,21 +303,42 @@ fn add_greedy_top(
 /// ======================
 
 // Generiert eine Mask aus Blocktype und None für die generierung des Meshes
+// Für TOP: Ebene Y, Maske geht über X und Z
+// Für Right/Left: X, Maske über Y und Z
+// Für Front/Back: Z, Maske über X, Y
 fn generate_face_mask(
-    y: usize,
-    buffer: &PaddedBuffer
+    slice: usize,
+    buffer: &PaddedBuffer,
+    dir: FaceDirection,
 ) -> Vec<Option<BlockType>> {
     let mut mask = Vec::new();
+
+    // Hier noch was mchen
+    let offset = neighbor_offset(dir);
     
-    for x in 0..CHUNK_SIZE {
-        for z in 0..CHUNK_SIZE {
+    for u in 0..CHUNK_SIZE { // x
+        for v in 0..CHUNK_SIZE { // z
+            // Koordinaten der Ebene
+            let (x, y, z) = match dir {
+                FaceDirection::Back | FaceDirection::Front => (u, v, slice),
+                FaceDirection::Bottom | FaceDirection::Top => (u, slice, v),
+                FaceDirection::Left | FaceDirection::Right => (slice, u, v)
+            };
+            
             let px = x + 1;
             let py = y + 1;
             let pz = z + 1;
 
+
             let block = buffer[pad_idx(px, py, pz)];
 
-            let render_top = should_render_face(block, buffer[pad_idx(px, py + 1, pz)]);
+            let neighbor = buffer[pad_idx(
+                (px as i32 + offset.x) as usize,
+                (py as i32 + offset.y) as usize,
+                (pz as i32 + offset.z) as usize,
+            )];
+
+            let render_top = should_render_face(block, neighbor);
 
             if render_top {
                 mask.push(Some(block));
@@ -304,6 +421,17 @@ fn clear_mask(
             let index = (x + dx) * CHUNK_SIZE + (z + dz);
             mask[index] = None;
         }
+    }
+}
+
+fn neighbor_offset(dir: FaceDirection) -> IVec3 {
+    match dir {
+        FaceDirection::Back => IVec3::NEG_Z,
+        FaceDirection::Bottom => IVec3::NEG_Y,
+        FaceDirection::Front => IVec3::Z,
+        FaceDirection::Left => IVec3::NEG_X,
+        FaceDirection::Right => IVec3::X,
+        FaceDirection::Top => IVec3::Y,
     }
 }
 

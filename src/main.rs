@@ -75,7 +75,7 @@ fn setup(
     mut wireframe_config: ResMut<WireframeConfig>,
 ) {
 
-    wireframe_config.global = false;
+    wireframe_config.global = true;
 
     if settings.shadows {
         commands.spawn((DirectionalLight {
